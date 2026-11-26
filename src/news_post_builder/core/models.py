@@ -102,6 +102,7 @@ class PublishResult(BaseModel):
     target_endpoint: str
     saved_file_path: str | None = None
     wp_post_id: int | None = None
+    wp_post_url: str | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 

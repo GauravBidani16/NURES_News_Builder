@@ -129,12 +129,14 @@ class WordPressPublisher(Publisher):
                 )
             res_data = response.json()
             wp_post_id = res_data.get("id")
+            wp_post_url = res_data.get("link")
             return PublishResult(
                 is_dry_run=False,
                 payload=payload_dict,
                 target_endpoint=target_endpoint,
                 saved_file_path=None,
                 wp_post_id=wp_post_id,
+                wp_post_url=wp_post_url,
             )
         except httpx.RequestError as exc:
             raise PublishError(

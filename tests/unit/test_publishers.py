@@ -114,7 +114,8 @@ async def test_wordpress_publisher_mocked_http_success(
                 201,
                 json={
                     "id": 999,
-                    "status": "draft",
+                    "status": "publish",
+                    "link": "https://nudvnures.wpenginepowered.com/test-headline",
                     "title": {"raw": "Test Headline"},
                     "categories": [31],
                     "featured_media": 4732,
@@ -126,6 +127,7 @@ async def test_wordpress_publisher_mocked_http_success(
 
             assert result.is_dry_run is False
             assert result.wp_post_id == 999
+            assert result.wp_post_url == "https://nudvnures.wpenginepowered.com/test-headline"
             assert result.target_endpoint == target_endpoint
 
             # Assert mock was called with correct auth and payload

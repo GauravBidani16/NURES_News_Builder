@@ -28,18 +28,25 @@
 </div>
 {% else %}
 <div class="alert alert-success">
-  <h3 style="margin-bottom: 6px; color: var(--success);">&#10004; Post Successfully Created in WordPress as Draft!</h3>
-  <p>Your post draft was securely submitted to WordPress with status <strong>draft</strong> in category <strong>News</strong>.</p>
+  <h3 style="margin-bottom: 6px; color: var(--success);">&#10004; Post Successfully Published Live on WordPress!</h3>
+  <p>Your post was successfully published live to the website in category <strong>News</strong>.</p>
 </div>
 
 <div class="card">
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
     <h2>Live WordPress Post Details</h2>
-    {% if result.wp_post_id %}
-    <a href="https://nudvnures.wpenginepowered.com/wp-admin/post.php?post={{ result.wp_post_id }}&action=edit" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm">
-      Open in WordPress Admin &nearr;
-    </a>
-    {% endif %}
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+      {% if result.wp_post_url %}
+      <a href="{{ result.wp_post_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm">
+        View Published Post on Website &nearr;
+      </a>
+      {% endif %}
+      {% if result.wp_post_id %}
+      <a href="https://nudvnures.wpenginepowered.com/wp-admin/post.php?post={{ result.wp_post_id }}&action=edit" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm">
+        Edit in WordPress Admin &nearr;
+      </a>
+      {% endif %}
+    </div>
   </div>
   <p style="margin-bottom: 12px; font-size: 0.95rem;">
     <strong>WordPress Post ID:</strong> <code>{{ result.wp_post_id }}</code>

@@ -12,14 +12,16 @@
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
     <h2>Final Post Preview</h2>
     {% if settings and settings.wp_publish_enabled %}
-    <span class="badge" style="background: var(--success-bg); color: var(--success); border: 1px solid var(--success-border); font-size: 0.78rem;">&#9679; Target: Live WordPress Draft</span>
+    <span class="badge" style="background: var(--success-bg); color: var(--success); border: 1px solid var(--success-border); font-size: 0.78rem;">
+      &#9679; Target: Live WordPress (Status: {{ preview.status }})
+    </span>
     {% else %}
     <span class="badge badge-dryrun">WordPress Target: Dry-Run Draft</span>
     {% endif %}
   </div>
   <p style="color: var(--text-muted); font-size: 0.92rem;">
     {% if settings and settings.wp_publish_enabled %}
-    Review the formatted post layout and selected featured image below before creating the draft on WordPress.
+    Review the formatted post layout and selected featured image below. Once confirmed, it will publish live on WordPress.
     {% else %}
     Review the formatted post layout and selected featured image below before saving to dry-run payload.
     {% endif %}
@@ -67,7 +69,7 @@
     <li><strong>Post Status:</strong> <code>{{ preview.status }}</code></li>
     <li><strong>Publish Mode:</strong>
       {% if settings and settings.wp_publish_enabled %}
-        <strong style="color: var(--success);">&#9679; Live WordPress Draft</strong> (Posts directly to WordPress as draft)
+        <strong style="color: var(--success);">&#9679; Live WordPress Post</strong> (Posts directly to WordPress with status: <code>{{ preview.status }}</code>)
       {% else %}
         Dry Run (Writes payload to <code>./data/dry_run/</code>, sends zero HTTP requests)
       {% endif %}
@@ -80,14 +82,35 @@
     <button type="submit" class="btn btn-secondary">&larr; Back to Options / Edit</button>
   </form>
 
-  <form method="POST" action="/session/{{ session.session_id }}/confirm">
-    <button type="submit" class="btn btn-primary" style="padding: 12px 28px; font-size: 1.05rem;">
+  <form method="POST" action="/session/{{ session.session_id }}/confirm" onsubmit="return confirmPublish(event)">
+    <button type="submit" id="confirm-publish-btn" class="btn btn-primary" style="padding: 12px 28px; font-size: 1.05rem;">
       {% if settings and settings.wp_publish_enabled %}
-      Publish Draft to WordPress &rarr;
+      Publish Live to WordPress &rarr;
       {% else %}
       Confirm &amp; Save Dry-Run Post &rarr;
       {% endif %}
     </button>
   </form>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function confirmPublish(e) {
+    const isLive = {% if settings and settings.wp_publish_enabled %}true{% else %}false{% endif %};
+    if (isLive) {
+      const ok = confirm("Are you sure you want to publish this post LIVE to WordPress? It will be published immediately on the website.");
+      if (!ok) {
+        e.preventDefault();
+        return false;
+      }
+    }
+    const btn = document.getElementById('confirm-publish-btn');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-icon-white"></span> Publishing to WordPress...';
+    }
+    return true;
+  }
+</script>
 {% endblock %}
