@@ -1,35 +1,157 @@
 {% extends "base.html" %}
 
 {% block title %}New Post — News Post Builder{% endblock %}
+{% block step1_class %}active{% endblock %}
 
 {% block content %}
 <div class="card">
   <h2>Create WordPress News Post</h2>
-  <p style="color: var(--text-muted); margin-bottom: 24px;">
-    Paste an article link to automatically extract content and generate headline and description options.
+  <p style="color: var(--text-muted); margin-bottom: 24px; font-size: 0.95rem;">
+    Paste a news link to automatically extract content, discover WordPress featured images, and generate headline and description options.
   </p>
 
-  <form method="POST" action="/session/{{ session.session_id }}/submit">
+  <form method="POST" action="/session/{{ session.session_id }}/submit" id="article-form" onsubmit="handleFormSubmit(event)">
     <div class="form-group">
       <label for="url">Article URL (Recommended):</label>
-      <input type="url" id="url" name="url" placeholder="https://example.com/news/article" autofocus>
+      <input type="url" id="url" name="url" placeholder="https://example.com/news/article" autofocus autocomplete="off">
     </div>
 
-    <div style="margin: 20px 0; text-align: center; position: relative;">
-      <hr style="border: 0; border-top: 1px solid #ddd;">
-      <span style="position: absolute; top: -11px; background: #fff; padding: 0 14px; color: var(--text-muted); font-size: 0.85rem;">
-        OR PASTE TEXT FALLBACK
+    <div style="margin: 22px 0; text-align: center; position: relative;">
+      <hr style="border: 0; border-top: 1px solid var(--border);">
+      <span style="position: absolute; top: -11px; left: 50%; transform: translateX(-50%); background: #ffffff; padding: 0 16px; color: var(--text-muted); font-size: 0.8rem; font-weight: 600; text-transform: uppercase;">
+        OR PASTE TEXT DIRECTLY
       </span>
     </div>
 
     <div class="form-group">
       <label for="text">Article Text:</label>
-      <textarea id="text" name="text" rows="6" placeholder="Paste article headline and body text here..."></textarea>
+      <textarea id="text" name="text" rows="5" placeholder="Paste article headline and body text here..."></textarea>
     </div>
 
-    <button type="submit" class="btn btn-primary" style="width: 100%;">
-      Fetch &amp; Generate Options
+    <button type="submit" id="submit-btn" class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 1.05rem;">
+      Fetch &amp; Generate Options &rarr;
     </button>
   </form>
+
+  <!-- Live Multi-Step Progress Container (Shown on Submit) -->
+  <div id="progress-container" class="progress-card" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
+      <strong style="font-size: 0.98rem; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+        <span class="spinner-icon"></span> Processing Article
+      </strong>
+      <span id="elapsed-timer" style="font-size: 0.82rem; color: var(--text-muted); font-variant-numeric: tabular-nums;">
+        0.0s elapsed
+      </span>
+    </div>
+
+    <div id="step-fetch" class="progress-step active">
+      <div class="progress-icon" id="icon-fetch">1</div>
+      <div>
+        <div style="font-size: 0.92rem;">1. Safe Fetch &amp; Security Validation</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted);">
+          Resolving domain DNS, guarding against SSRF, and streaming HTML
+        </div>
+      </div>
+    </div>
+
+    <div id="step-extract" class="progress-step">
+      <div class="progress-icon" id="icon-extract">2</div>
+      <div>
+        <div style="font-size: 0.92rem;">2. Content Extraction &amp; Cleaning</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted);">
+          Stripping headers, ads, and cookies with Trafilatura
+        </div>
+      </div>
+    </div>
+
+    <div id="step-llm" class="progress-step">
+      <div class="progress-icon" id="icon-llm">3</div>
+      <div>
+        <div style="font-size: 0.92rem;">3. AI Headline &amp; Description Generation</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted);">
+          Gemini LLM analyzing facts and drafting 3 headlines + 3 descriptions
+        </div>
+      </div>
+    </div>
+
+    <div id="step-media" class="progress-step">
+      <div class="progress-icon" id="icon-media">4</div>
+      <div>
+        <div style="font-size: 0.92rem;">4. WordPress Media Matching</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted);">
+          Querying WordPress media library and matching featured image options
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let startTime = null;
+  let timerInterval = null;
+
+  function handleFormSubmit(e) {
+    const urlInput = document.getElementById('url').value.trim();
+    const textInput = document.getElementById('text').value.trim();
+
+    if (!urlInput && !textInput) {
+      alert('Please enter an article URL or paste article text.');
+      e.preventDefault();
+      return false;
+    }
+
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-icon-white"></span> Generating Suggestions...';
+
+    const progress = document.getElementById('progress-container');
+    progress.style.display = 'block';
+
+    startTime = Date.now();
+    const timerElem = document.getElementById('elapsed-timer');
+    timerInterval = setInterval(() => {
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      timerElem.innerText = `${elapsed}s elapsed`;
+    }, 100);
+
+    // Progressive step animations to show user the pipeline stages
+    setTimeout(() => {
+      markStepDone('step-fetch', 'icon-fetch');
+      markStepActive('step-extract', 'icon-extract');
+    }, 450);
+
+    setTimeout(() => {
+      markStepDone('step-extract', 'icon-extract');
+      markStepActive('step-llm', 'icon-llm');
+    }, 1100);
+
+    setTimeout(() => {
+      markStepDone('step-llm', 'icon-llm');
+      markStepActive('step-media', 'icon-media');
+    }, 14000);
+
+    return true;
+  }
+
+  function markStepDone(stepId, iconId) {
+    const step = document.getElementById(stepId);
+    const icon = document.getElementById(iconId);
+    if (step && icon) {
+      step.classList.remove('active');
+      step.classList.add('done');
+      icon.innerHTML = '&#10003;';
+    }
+  }
+
+  function markStepActive(stepId, iconId) {
+    const step = document.getElementById(stepId);
+    const icon = document.getElementById(iconId);
+    if (step && icon) {
+      step.classList.add('active');
+      icon.innerHTML = '<span class="spinner-icon"></span>';
+    }
+  }
+</script>
 {% endblock %}

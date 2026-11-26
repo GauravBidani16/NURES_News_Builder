@@ -112,6 +112,7 @@ async def select_options(
     description_text: Annotated[str, Form()],
     headline_id: Annotated[str | None, Form()] = None,
     description_id: Annotated[str | None, Form()] = None,
+    media_id: Annotated[int | None, Form()] = None,
 ) -> RedirectResponse:
     service.select(
         session_id=session_id,
@@ -119,6 +120,7 @@ async def select_options(
         description=description_text,
         headline_id=headline_id,
         description_id=description_id,
+        media_id=media_id,
     )
     return RedirectResponse(url=f"/session/{session_id}/preview", status_code=303)
 

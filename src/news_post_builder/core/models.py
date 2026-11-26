@@ -82,6 +82,17 @@ class WordPressPostPayload(BaseModel):
     featured_media: int | None = None
 
 
+class MediaItem(BaseModel):
+    """Selectable featured media item from WordPress media library."""
+
+    id: int = Field(description="WordPress Media ID")
+    title: str = Field(description="Image title or name")
+    url: str = Field(description="Full image URL")
+    thumbnail_url: str | None = Field(default=None, description="Thumbnail or display URL")
+    is_recommended: bool = Field(default=False, description="Whether recommended")
+    tag: str | None = Field(default=None, description="Tag, e.g. NIH, Default, Custom")
+
+
 class PublishResult(BaseModel):
     """Result of publishing (either dry-run or live)."""
 
@@ -109,6 +120,10 @@ class SessionData(BaseModel):
     selected_description: str | None = None
     selected_headline_id: str | None = None
     selected_description_id: str | None = None
+    media_options: list[MediaItem] = Field(default_factory=list)
+    selected_media_id: int | None = None
+    selected_media_url: str | None = None
+    selected_media_title: str | None = None
     publish_key: str | None = None
     publish_result: PublishResult | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))

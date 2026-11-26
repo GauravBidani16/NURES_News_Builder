@@ -1,19 +1,24 @@
 {% extends "base.html" %}
 
 {% block title %}Post Confirmed — News Post Builder{% endblock %}
+{% block step1_class %}completed{% endblock %}
+{% block line1_class %}completed{% endblock %}
+{% block step2_class %}completed{% endblock %}
+{% block line2_class %}completed{% endblock %}
+{% block step3_class %}completed{% endblock %}
 
 {% block content %}
 <div class="alert alert-success">
-  <h3 style="margin-bottom: 6px; color: #155724;">&#10004; Post Confirmed in Dry-Run Mode!</h3>
+  <h3 style="margin-bottom: 6px; color: var(--success);">&#10004; Post Confirmed in Dry-Run Mode!</h3>
   <p>The post payload was successfully constructed and saved locally inside the project. Absolutely zero HTTP requests were sent to WordPress.</p>
 </div>
 
 <div class="card">
   <h2>Saved Dry-Run Output</h2>
-  <p style="margin-bottom: 14px;">
+  <p style="margin-bottom: 12px; font-size: 0.95rem;">
     <strong>Payload File:</strong> <code>{{ result.saved_file_path }}</code>
   </p>
-  <p style="margin-bottom: 20px;">
+  <p style="margin-bottom: 20px; font-size: 0.95rem;">
     <strong>Target WordPress Endpoint:</strong> <code>{{ result.target_endpoint }}</code>
   </p>
 
@@ -22,6 +27,6 @@
 </div>
 
 <div style="margin-top: 28px; text-align: center;">
-  <a href="/" class="btn btn-primary">Start Another News Post</a>
+  <a href="/" class="btn btn-primary" style="padding: 12px 28px; font-size: 1.05rem;">Start Another News Post &rarr;</a>
 </div>
 {% endblock %}

@@ -23,7 +23,9 @@ def web_client(tmp_path: Path) -> TestClient:
     return TestClient(app, follow_redirects=False)
 
 
+@respx.mock
 def test_web_flow_from_start_to_confirm(web_client: TestClient) -> None:
+    respx.get("https://nudvnures.wpenginepowered.com/wp-json/wp/v2/media").respond(200, json=[])
     # 1. GET / redirects to new session
     res_index = web_client.get("/")
     assert res_index.status_code == 303
@@ -54,6 +56,7 @@ def test_web_flow_from_start_to_confirm(web_client: TestClient) -> None:
     assert res_options.status_code == 200
     assert "1. Select a Headline" in res_options.text
     assert "2. Select a Description" in res_options.text
+    assert "3. Select Featured Image" in res_options.text
     assert "Top Recommendation" in res_options.text
 
     # 5. POST /session/{id}/more adds options
@@ -68,6 +71,7 @@ def test_web_flow_from_start_to_confirm(web_client: TestClient) -> None:
             "headline_text": "Fusion Milestone Verified",
             "description_id": "D1",
             "description_text": "Researchers achieved net fusion energy gain twice in a row.",
+            "media_id": 4732,
         },
     )
     assert res_select.status_code == 303
@@ -78,6 +82,7 @@ def test_web_flow_from_start_to_confirm(web_client: TestClient) -> None:
     assert res_preview.status_code == 200
     assert "Final Post Preview" in res_preview.text
     assert "Fusion Milestone Verified" in res_preview.text
+    assert "4732" in res_preview.text
 
     # 8. POST /session/{id}/confirm (Dry-Run)
     res_confirm = web_client.post(f"/session/{session_id}/confirm")

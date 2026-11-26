@@ -1,23 +1,26 @@
 {% extends "base.html" %}
 
-{% block title %}Select Options — News Post Builder{% endblock %}
+{% block title %}Select Options & Image — News Post Builder{% endblock %}
+{% block step1_class %}completed{% endblock %}
+{% block line1_class %}completed{% endblock %}
+{% block step2_class %}active{% endblock %}
 
 {% block content %}
 {% if session.extracted_article %}
-<div class="card" style="padding: 16px 20px; margin-bottom: 20px; background: #fdfefe;">
-  <div style="display: flex; justify-content: space-between; align-items: center;">
+<div class="card" style="padding: 16px 22px; margin-bottom: 20px; background: #ffffff; border-left: 4px solid #3b82f6;">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
     <div>
-      <span style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted); font-weight: 600;">Extracted Source Article</span>
-      <h3 style="margin: 4px 0 6px 0; font-size: 1.15rem;">{{ session.extracted_article.title or "Untitled Article" }}</h3>
+      <span style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700; letter-spacing: 0.5px;">Extracted Source Article</span>
+      <h3 style="margin: 4px 0 6px 0; font-size: 1.15rem; color: #0f172a;">{{ session.extracted_article.title or "Untitled Article" }}</h3>
       <p style="font-size: 0.85rem; color: var(--text-muted);">
-        {% if session.extracted_article.site_name %}{{ session.extracted_article.site_name }} &bull; {% endif %}
+        {% if session.extracted_article.site_name %}<strong>{{ session.extracted_article.site_name }}</strong> &bull; {% endif %}
         {% if session.extracted_article.publish_date %}{{ session.extracted_article.publish_date }} &bull; {% endif %}
         {{ session.extracted_article.text|length }} characters extracted
       </p>
     </div>
     {% if session.extracted_article.source_url %}
     <a href="{{ session.extracted_article.source_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm">
-      Open Original
+      Open Original Link &nearr;
     </a>
     {% endif %}
   </div>
@@ -29,7 +32,7 @@
   <div class="card">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
       <h2>1. Select a Headline</h2>
-      <span style="font-size: 0.85rem; color: var(--text-muted);">Choose one or edit</span>
+      <span style="font-size: 0.85rem; color: var(--text-muted);">Choose one or edit directly</span>
     </div>
 
     {% for h in session.accumulated_headlines %}
@@ -39,18 +42,18 @@
              {% if loop.first and not session.selected_headline_id or session.selected_headline_id == h.id %}checked{% endif %}>
       <div style="flex: 1;">
         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-          <strong>{{ h.id }}</strong>
+          <strong style="font-size: 0.88rem; color: #334155;">Option {{ h.id }}</strong>
           {% if h.is_recommended %}
           <span class="badge badge-rec">&#9733; Top Recommendation</span>
           {% endif %}
         </div>
-        <div style="font-size: 1.05rem;">{{ h.text }}</div>
+        <div style="font-size: 1.05rem; font-weight: 500; color: #0f172a;">{{ h.text }}</div>
       </div>
     </div>
     {% endfor %}
 
     <!-- Editable Headline Field -->
-    <div class="form-group" style="margin-top: 18px;">
+    <div class="form-group" style="margin-top: 18px; margin-bottom: 0;">
       <label for="headline_text">Selected Headline (editable):</label>
       <input type="text" id="headline_text" name="headline_text"
              value="{{ session.selected_headline or (session.accumulated_headlines[0].text if session.accumulated_headlines else '') }}" required>
@@ -61,7 +64,7 @@
   <div class="card">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
       <h2>2. Select a Description</h2>
-      <span style="font-size: 0.85rem; color: var(--text-muted);">1-2 lines long</span>
+      <span style="font-size: 0.85rem; color: var(--text-muted);">1-2 concise lines</span>
     </div>
 
     {% for d in session.accumulated_descriptions %}
@@ -71,45 +74,96 @@
              {% if loop.first and not session.selected_description_id or session.selected_description_id == d.id %}checked{% endif %}>
       <div style="flex: 1;">
         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-          <strong>{{ d.id }}</strong>
+          <strong style="font-size: 0.88rem; color: #334155;">Option {{ d.id }}</strong>
           {% if d.is_recommended %}
           <span class="badge badge-rec">&#9733; Top Recommendation</span>
           {% endif %}
-          <span style="font-size: 0.75rem; color: var(--text-muted);">({{ d.text|length }} chars)</span>
+          <span style="font-size: 0.78rem; color: var(--text-muted);">({{ d.text|length }} chars)</span>
         </div>
-        <div style="font-size: 0.95rem;">{{ d.text }}</div>
+        <div style="font-size: 0.95rem; color: #334155;">{{ d.text }}</div>
       </div>
     </div>
     {% endfor %}
 
     <!-- Editable Description Field -->
-    <div class="form-group" style="margin-top: 18px;">
+    <div class="form-group" style="margin-top: 18px; margin-bottom: 0;">
       <label for="description_text">Selected Description (editable, 1-2 lines):</label>
       <textarea id="description_text" name="description_text" rows="3" required>{{ session.selected_description or (session.accumulated_descriptions[0].text if session.accumulated_descriptions else '') }}</textarea>
     </div>
   </div>
 
+  <!-- Section 3: Featured Image Picker -->
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+      <h2>3. Select Featured Image</h2>
+      <span style="font-size: 0.85rem; color: var(--text-muted);">
+        Up to 5 matching WordPress media items
+      </span>
+    </div>
+    <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 16px;">
+      Click an image below to select it as the WordPress featured image (not embedded in post body):
+    </p>
+
+    <input type="hidden" name="media_id" id="selected_media_id" value="{{ session.selected_media_id or (session.media_options[0].id if session.media_options else '') }}">
+
+    <div class="image-grid">
+      {% for m in session.media_options %}
+      <div class="image-card {% if session.selected_media_id == m.id or (not session.selected_media_id and loop.first) %}selected{% endif %}"
+           id="media_card_{{ m.id }}"
+           onclick="selectMedia('{{ m.id }}')">
+        <div class="image-card-thumb-container">
+          <img src="{{ m.thumbnail_url or m.url }}" alt="{{ m.title }}" class="image-card-thumb" onerror="this.onerror=null;this.src='{{ m.url }}';">
+        </div>
+        <div class="image-card-body">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; margin-bottom: 6px;">
+            <div class="image-card-title">{{ m.title }}</div>
+            <input type="radio" name="media_radio" value="{{ m.id }}" id="media_radio_{{ m.id }}" class="option-radio"
+                   {% if session.selected_media_id == m.id or (not session.selected_media_id and loop.first) %}checked{% endif %}>
+          </div>
+          <div class="image-card-meta">
+            <span>WP ID: <strong>{{ m.id }}</strong></span>
+            {% if m.is_recommended %}
+            <span class="badge badge-rec">&#9733; Recommended</span>
+            {% elif m.tag %}
+            <span class="badge badge-dryrun">{{ m.tag }}</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Loading State Banner for More Options -->
+  <div id="more-loading-banner" class="alert alert-info" style="display: none; align-items: center; gap: 10px;">
+    <span class="spinner-icon"></span>
+    <span>Generating more options with Gemini AI... Please wait ~10-15 seconds.</span>
+  </div>
+
   <!-- Action Bar -->
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px;">
-    <div style="display: flex; gap: 8px; align-items: center;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px; flex-wrap: wrap; gap: 16px;">
+    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
       <span style="font-size: 0.85rem; color: var(--text-muted); margin-right: 4px;">
         Need more options? (Round {{ session.more_rounds_count }}/5):
       </span>
-      <button type="submit" formaction="/session/{{ session.session_id }}/more?target=headlines" class="btn btn-secondary btn-sm"
+      <button type="submit" formaction="/session/{{ session.session_id }}/more?target=headlines"
+              class="btn btn-secondary btn-sm" onclick="showMoreLoading(this)"
               {% if session.more_rounds_count >= 5 %}disabled{% endif %}>
         + More Headlines
       </button>
-      <button type="submit" formaction="/session/{{ session.session_id }}/more?target=descriptions" class="btn btn-secondary btn-sm"
+      <button type="submit" formaction="/session/{{ session.session_id }}/more?target=descriptions"
+              class="btn btn-secondary btn-sm" onclick="showMoreLoading(this)"
               {% if session.more_rounds_count >= 5 %}disabled{% endif %}>
         + More Descriptions
       </button>
-      <button type="submit" formaction="/session/{{ session.session_id }}/more?target=both" class="btn btn-secondary btn-sm"
+      <button type="submit" formaction="/session/{{ session.session_id }}/more?target=both"
+              class="btn btn-secondary btn-sm" onclick="showMoreLoading(this)"
               {% if session.more_rounds_count >= 5 %}disabled{% endif %}>
         + More Both
       </button>
     </div>
 
-    <button type="submit" class="btn btn-primary">
+    <button type="submit" class="btn btn-primary" style="padding: 12px 24px; font-size: 1rem;">
       Review Post Preview &rarr;
     </button>
   </div>
@@ -119,17 +173,34 @@
 {% block scripts %}
 <script>
   function selectHeadline(id, text) {
-    document.getElementById('h_' + id).checked = true;
+    const radio = document.getElementById('h_' + id);
+    if (radio) radio.checked = true;
     document.getElementById('headline_text').value = text;
     document.querySelectorAll('[id^="h_"]').forEach(el => el.closest('.option-card').classList.remove('selected'));
-    document.getElementById('h_' + id).closest('.option-card').classList.add('selected');
+    if (radio) radio.closest('.option-card').classList.add('selected');
   }
 
   function selectDescription(id, text) {
-    document.getElementById('d_' + id).checked = true;
+    const radio = document.getElementById('d_' + id);
+    if (radio) radio.checked = true;
     document.getElementById('description_text').value = text;
     document.querySelectorAll('[id^="d_"]').forEach(el => el.closest('.option-card').classList.remove('selected'));
-    document.getElementById('d_' + id).closest('.option-card').classList.add('selected');
+    if (radio) radio.closest('.option-card').classList.add('selected');
+  }
+
+  function selectMedia(id) {
+    document.getElementById('selected_media_id').value = id;
+    const radio = document.getElementById('media_radio_' + id);
+    if (radio) radio.checked = true;
+    document.querySelectorAll('.image-card').forEach(el => el.classList.remove('selected'));
+    const card = document.getElementById('media_card_' + id);
+    if (card) card.classList.add('selected');
+  }
+
+  function showMoreLoading(btn) {
+    const banner = document.getElementById('more-loading-banner');
+    if (banner) banner.style.display = 'flex';
+    btn.innerHTML = '<span class="spinner-icon"></span> Generating...';
   }
 </script>
 {% endblock %}

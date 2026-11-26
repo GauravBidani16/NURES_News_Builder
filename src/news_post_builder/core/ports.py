@@ -8,6 +8,7 @@ from typing import Protocol
 from news_post_builder.core.models import (
     ExtractedArticle,
     GenerationResult,
+    MediaItem,
     PostPreview,
     PublishResult,
     SessionData,
@@ -102,4 +103,17 @@ class SessionRepository(Protocol):
 
     def save(self, session: SessionData) -> None:
         """Save or update a session."""
+        ...
+
+
+class MediaProvider(Protocol):
+    """Port for searching and retrieving featured media options from WordPress."""
+
+    async def get_featured_media_options(
+        self,
+        search_pattern: str = "News_Item",
+        limit: int = 5,
+        is_nih: bool = False,
+    ) -> list[MediaItem]:
+        """Fetch media options matching search_pattern, with defaults included."""
         ...

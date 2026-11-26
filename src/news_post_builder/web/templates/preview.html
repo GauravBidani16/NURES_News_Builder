@@ -1,64 +1,74 @@
 {% extends "base.html" %}
 
 {% block title %}Post Preview — News Post Builder{% endblock %}
+{% block step1_class %}completed{% endblock %}
+{% block line1_class %}completed{% endblock %}
+{% block step2_class %}completed{% endblock %}
+{% block line2_class %}completed{% endblock %}
+{% block step3_class %}active{% endblock %}
 
 {% block content %}
 <div class="card" style="margin-bottom: 20px;">
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
     <h2>Final Post Preview</h2>
-    <span class="badge badge-dryrun">WordPress Draft Target</span>
+    <span class="badge badge-dryrun">WordPress Target: Draft</span>
   </div>
-  <p style="color: var(--text-muted); font-size: 0.9rem;">
-    Review the formatted post layout below before saving to dry-run payload.
+  <p style="color: var(--text-muted); font-size: 0.92rem;">
+    Review the formatted post layout and selected featured image below before saving to dry-run payload.
   </p>
 </div>
 
-<!-- Exact Post Layout Matching Verified Site Design -->
-<div class="card" style="padding: 40px; border-left: 4px solid var(--primary);">
+<!-- Formatted Post Card Matching Verified Editorial Site Design -->
+<div class="card" style="padding: 36px; border-left: 5px solid var(--primary);">
   {% if preview.featured_media_url %}
-  <div style="margin-bottom: 24px; text-align: center; background: #fafbfc; padding: 14px; border-radius: 6px; border: 1px solid #edf0f2;">
-    <span style="display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; font-weight: 600;">Featured Image Preview (WordPress Media ID: {{ preview.featured_media_id }})</span>
-    <img src="{{ preview.featured_media_url }}" alt="Featured Image" style="max-height: 200px; max-width: 100%; object-fit: contain; border-radius: 4px;">
+  <div style="margin-bottom: 26px; text-align: center; background: #f8fafc; padding: 18px; border-radius: var(--radius-sm); border: 1px solid var(--border);">
+    <span style="display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; font-weight: 700; letter-spacing: 0.5px;">
+      Featured Image (WordPress Media ID: <strong>{{ preview.featured_media_id }}</strong>{% if session.selected_media_title %} &bull; {{ session.selected_media_title }}{% endif %})
+    </span>
+    <img src="{{ preview.featured_media_url }}" alt="Featured Image" style="max-height: 220px; max-width: 100%; object-fit: contain; border-radius: 6px; box-shadow: var(--shadow-sm);">
   </div>
   {% endif %}
 
-  <div class="badge-category" style="margin-bottom: 12px; text-transform: uppercase;">News</div>
+  <div class="badge-category" style="margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">News</div>
   <h1 class="nih-title">{{ preview.selected_headline }}</h1>
   
   <div class="article-preview-box">
     <p class="nih-body">{{ preview.selected_description }}</p>
     
     {% if preview.source_url %}
-    <p style="margin-top: 18px; font-size: 0.95rem;">
-      Get more details here:<br>
-      <a href="{{ preview.source_url }}" target="_blank" rel="noopener noreferrer" class="nih-link">
-        {{ preview.selected_headline }}
-      </a>
-    </p>
+    <div style="margin-top: 22px; padding: 14px 18px; background: #f8fafc; border-radius: 6px; border: 1px solid var(--border);">
+      <div style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; font-weight: 600;">Original Source:</div>
+      <p style="font-size: 0.95rem; margin: 0;">
+        Get more details here:<br>
+        <a href="{{ preview.source_url }}" target="_blank" rel="noopener noreferrer" class="nih-link">
+          {{ preview.selected_headline }} &nearr;
+        </a>
+      </p>
+    </div>
     {% endif %}
   </div>
 </div>
 
 <!-- Post Metadata Details -->
-<div class="card" style="background: #fafbfc;">
-  <h3 style="font-size: 1rem; margin-bottom: 12px;">Publish Parameters:</h3>
-  <ul style="font-size: 0.9rem; list-style: none; line-height: 1.8;">
+<div class="card" style="background: #ffffff;">
+  <h3 style="font-size: 1rem; margin-bottom: 14px; color: #0f172a;">Publish Parameters:</h3>
+  <ul style="font-size: 0.9rem; list-style: none; line-height: 1.9; padding: 0;">
     <li><strong>Target Endpoint:</strong> <code>https://nudvnures.wpenginepowered.com/wp-json/wp/v2/posts</code></li>
-    <li><strong>Category:</strong> News (ID: <code>{{ preview.category_id }}</code>)</li>
-    <li><strong>Featured Media ID:</strong> <code>{{ preview.featured_media_id }}</code></li>
+    <li><strong>Category:</strong> News (ID: <code>{{ preview.category_id }}</code>, Slug: <code>{{ preview.category_slug }}</code>)</li>
+    <li><strong>Featured Media ID:</strong> <code>{{ preview.featured_media_id }}</code> (Set strictly as post featured image)</li>
     <li><strong>Post Status:</strong> <code>{{ preview.status }}</code></li>
     <li><strong>Publish Mode:</strong> Dry Run (Writes payload to <code>./data/dry_run/</code>, sends zero HTTP requests)</li>
   </ul>
 </div>
 
-<div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px;">
+<div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px; flex-wrap: wrap; gap: 14px;">
   <form method="POST" action="/session/{{ session.session_id }}/back">
     <button type="submit" class="btn btn-secondary">&larr; Back to Options / Edit</button>
   </form>
 
   <form method="POST" action="/session/{{ session.session_id }}/confirm">
     <button type="submit" class="btn btn-primary" style="padding: 12px 28px; font-size: 1.05rem;">
-      Confirm Post &rarr;
+      Confirm &amp; Save Dry-Run Post &rarr;
     </button>
   </form>
 </div>

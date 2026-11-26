@@ -2,11 +2,13 @@
 
 from pathlib import Path
 
+import httpx
 import pytest
 
 from news_post_builder.adapters.extractor import TrafilaturaExtractor
 from news_post_builder.adapters.fetcher import HttpxArticleFetcher
 from news_post_builder.adapters.llm.mock_provider import MockLLMProvider
+from news_post_builder.adapters.media_provider import WordPressMediaProvider
 from news_post_builder.adapters.payload_builder import StandardPayloadBuilder
 from news_post_builder.adapters.publishers import DryRunPublisher
 from news_post_builder.adapters.repository import SQLiteSessionRepository
@@ -33,6 +35,10 @@ def test_service(tmp_path: Path) -> NewsPostService:
     publisher = DryRunPublisher(data_dir=dry_run_dir, settings=settings)
     repository = SQLiteSessionRepository(db_path=db_path, settings=settings)
     payload_builder = StandardPayloadBuilder(settings=settings)
+    mock_media_client = httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda _req: httpx.Response(200, json=[]))
+    )
+    media_provider = WordPressMediaProvider(settings=settings, client=mock_media_client)
 
     return NewsPostService(
         fetcher=fetcher,
@@ -42,6 +48,7 @@ def test_service(tmp_path: Path) -> NewsPostService:
         repository=repository,
         payload_builder=payload_builder,
         settings=settings,
+        media_provider=media_provider,
     )
 
 
@@ -129,3 +136,22 @@ async def test_more_rounds_capped(test_service: NewsPostService) -> None:
     with pytest.raises(NewsBuilderError) as exc_info:
         await test_service.request_more(session.session_id)
     assert "Maximum more options rounds" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_image_picker_selection_overrides_default(test_service: NewsPostService) -> None:
+    session = test_service.create_session()
+    article_text = "Article Title\n\n" + "Content for testing image picker selection. " * 10
+    session = await test_service.submit(session.session_id, ArticleInput(text=article_text))
+
+    assert len(session.media_options) >= 2
+    # Select specific media ID
+    session = test_service.select(
+        session_id=session.session_id,
+        headline="Headline",
+        description="Description",
+        media_id=4732,
+    )
+    assert session.selected_media_id == 4732
+    preview = test_service.get_preview(session.session_id)
+    assert preview.featured_media_id == 4732

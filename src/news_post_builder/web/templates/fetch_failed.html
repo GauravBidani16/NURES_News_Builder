@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}Fetch Failed — News Post Builder{% endblock %}
+{% block step1_class %}active{% endblock %}
 
 {% block content %}
 <div class="alert alert-danger">
@@ -10,7 +11,7 @@
 
 <div class="card">
   <h3>Paste Article Text Directly</h3>
-  <p style="color: var(--text-muted); margin-bottom: 20px;">
+  <p style="color: var(--text-muted); margin-bottom: 20px; font-size: 0.95rem;">
     Per our accuracy rules, we never invent information for an article that could not be read. Please paste the article body directly below to generate suggestions.
   </p>
 
@@ -20,7 +21,7 @@
       <textarea id="text" name="text" rows="10" required autofocus placeholder="Paste the full article body text here...">{{ session.input_text or "" }}</textarea>
     </div>
 
-    <div style="display: flex; gap: 12px;">
+    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
       <button type="submit" class="btn btn-primary">Generate Options from Pasted Text</button>
       <a href="/" class="btn btn-secondary">Start Over with a New URL</a>
     </div>

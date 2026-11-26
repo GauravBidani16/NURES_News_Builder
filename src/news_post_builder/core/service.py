@@ -22,6 +22,7 @@ from news_post_builder.core.ports import (
     ArticleExtractor,
     ArticleFetcher,
     LLMProvider,
+    MediaProvider,
     PayloadBuilder,
     Publisher,
     SessionRepository,
@@ -43,6 +44,7 @@ class NewsPostService:
         repository: SessionRepository,
         payload_builder: PayloadBuilder,
         settings: Settings | None = None,
+        media_provider: MediaProvider | None = None,
     ) -> None:
         self.fetcher = fetcher
         self.extractor = extractor
@@ -51,6 +53,7 @@ class NewsPostService:
         self.repository = repository
         self.payload_builder = payload_builder
         self.settings = settings or get_settings()
+        self.media_provider = media_provider
 
     def create_session(self) -> SessionData:
         session = SessionData(session_id=str(uuid.uuid4()), state=SessionState.NEW)
@@ -107,6 +110,45 @@ class NewsPostService:
             session.accumulated_headlines = result.headlines
             session.accumulated_descriptions = result.descriptions
             session.more_rounds_count = 0
+
+            # Step 3: Fetch Media Options
+            detect_text = " ".join(
+                filter(
+                    None,
+                    [
+                        session.input_url,
+                        extracted.source_url,
+                        extracted.title,
+                    ],
+                )
+            ).lower()
+            is_nih = "nih" in detect_text
+
+            if self.media_provider:
+                try:
+                    media_options = await self.media_provider.get_featured_media_options(
+                        search_pattern="News_Item",
+                        limit=5,
+                        is_nih=is_nih,
+                    )
+                    session.media_options = media_options
+                    for m in media_options:
+                        if m.is_recommended:
+                            session.selected_media_id = m.id
+                            session.selected_media_url = m.url
+                            session.selected_media_title = m.title
+                            break
+                    if not session.selected_media_id and media_options:
+                        session.selected_media_id = media_options[0].id
+                        session.selected_media_url = media_options[0].url
+                        session.selected_media_title = media_options[0].title
+                except Exception as exc:
+                    logger.warning(
+                        "Failed to fetch media options for session %s: %s",
+                        session_id,
+                        exc,
+                    )
+
             transition_session(session, SessionState.OPTIONS_READY)
             self.repository.save(session)
             return session
@@ -164,6 +206,7 @@ class NewsPostService:
         description: str,
         headline_id: str | None = None,
         description_id: str | None = None,
+        media_id: int | None = None,
     ) -> SessionData:
         session = self.get_session(session_id)
         transition_session(session, SessionState.PREVIEW)
@@ -171,6 +214,15 @@ class NewsPostService:
         session.selected_description = description.strip()
         session.selected_headline_id = headline_id
         session.selected_description_id = description_id
+
+        if media_id is not None:
+            session.selected_media_id = media_id
+            for m in session.media_options:
+                if m.id == media_id:
+                    session.selected_media_url = m.url
+                    session.selected_media_title = m.title
+                    break
+
         self.repository.save(session)
         return session
 
@@ -203,16 +255,20 @@ class NewsPostService:
         ).lower()
 
         is_nih = "nih" in detect_text
-        featured_id = (
-            self.settings.wp_featured_media_nih_id
-            if is_nih
-            else self.settings.wp_featured_media_default_id
-        )
-        featured_url = (
-            self.settings.wp_featured_media_nih_url
-            if is_nih
-            else self.settings.wp_featured_media_default_url
-        )
+        if session.selected_media_id and session.selected_media_url:
+            featured_id = session.selected_media_id
+            featured_url = session.selected_media_url
+        else:
+            featured_id = (
+                self.settings.wp_featured_media_nih_id
+                if is_nih
+                else self.settings.wp_featured_media_default_id
+            )
+            featured_url = (
+                self.settings.wp_featured_media_nih_url
+                if is_nih
+                else self.settings.wp_featured_media_default_url
+            )
 
         return PostPreview(
             selected_headline=session.selected_headline,
