@@ -83,6 +83,14 @@
         </div>
       </div>
     </div>
+
+    <!-- Stop & Start New Post Action -->
+    <div style="margin-top: 18px; text-align: center; border-top: 1px solid var(--border); padding-top: 14px;">
+      <button type="button" id="cancel-btn" class="btn btn-secondary btn-sm" onclick="cancelCurrentRun()"
+              style="color: var(--danger); border-color: var(--danger-border); background: #ffffff; cursor: pointer;">
+        &#10006; Stop &amp; Start New Post
+      </button>
+    </div>
   </div>
 </div>
 {% endblock %}
@@ -152,6 +160,21 @@
       step.classList.add('active');
       icon.innerHTML = '<span class="spinner-icon"></span>';
     }
+  }
+
+  async function cancelCurrentRun() {
+    const cancelBtn = document.getElementById('cancel-btn');
+    if (cancelBtn) {
+      cancelBtn.disabled = true;
+      cancelBtn.innerHTML = '<span class="spinner-icon"></span> Stopping session...';
+    }
+    if (timerInterval) clearInterval(timerInterval);
+    try {
+      await fetch('/session/{{ session.session_id }}/cancel', { method: 'POST' });
+    } catch (err) {
+      console.warn('Cancel signal sent:', err);
+    }
+    window.location.href = '/session/new';
   }
 </script>
 {% endblock %}

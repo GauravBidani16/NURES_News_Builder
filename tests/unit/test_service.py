@@ -155,3 +155,14 @@ async def test_image_picker_selection_overrides_default(test_service: NewsPostSe
     assert session.selected_media_id == 4732
     preview = test_service.get_preview(session.session_id)
     assert preview.featured_media_id == 4732
+
+
+def test_cancel_session_stops_and_updates_state(test_service: NewsPostService) -> None:
+    session = test_service.create_session()
+    assert session.state == SessionState.NEW
+
+    cancelled_session = test_service.cancel(session.session_id)
+    assert cancelled_session.state == SessionState.CANCELLED
+
+    fetched = test_service.get_session(session.session_id)
+    assert fetched.state == SessionState.CANCELLED

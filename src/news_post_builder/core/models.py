@@ -14,6 +14,7 @@ class SessionState(StrEnum):
     FETCH_FAILED = "FETCH_FAILED"
     PREVIEW = "PREVIEW"
     DONE = "DONE"
+    CANCELLED = "CANCELLED"
 
 
 class ArticleInput(BaseModel):

@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 
 from news_post_builder.config import Settings, get_settings
 from news_post_builder.core.exceptions import NewsBuilderError
+from news_post_builder.core.task_manager import TaskManager
 from news_post_builder.web.routes import router
 
 logger = logging.getLogger("news_post_builder")
@@ -38,6 +39,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         description="Turns a news article into a ready-to-publish WordPress post.",
         lifespan=lifespan,
     )
+    app.state.task_manager = TaskManager()
     if settings is not None:
         app.state.settings = settings
 

@@ -16,12 +16,21 @@ from news_post_builder.core.exceptions import InvalidTransitionError
 from news_post_builder.core.models import SessionData, SessionState
 
 VALID_TRANSITIONS: dict[SessionState, set[SessionState]] = {
-    SessionState.NEW: {SessionState.FETCHING},
-    SessionState.FETCHING: {SessionState.OPTIONS_READY, SessionState.FETCH_FAILED},
-    SessionState.FETCH_FAILED: {SessionState.FETCHING},
-    SessionState.OPTIONS_READY: {SessionState.OPTIONS_READY, SessionState.PREVIEW},
-    SessionState.PREVIEW: {SessionState.OPTIONS_READY, SessionState.DONE},
+    SessionState.NEW: {SessionState.FETCHING, SessionState.CANCELLED},
+    SessionState.FETCHING: {
+        SessionState.OPTIONS_READY,
+        SessionState.FETCH_FAILED,
+        SessionState.CANCELLED,
+    },
+    SessionState.FETCH_FAILED: {SessionState.FETCHING, SessionState.CANCELLED},
+    SessionState.OPTIONS_READY: {
+        SessionState.OPTIONS_READY,
+        SessionState.PREVIEW,
+        SessionState.CANCELLED,
+    },
+    SessionState.PREVIEW: {SessionState.OPTIONS_READY, SessionState.DONE, SessionState.CANCELLED},
     SessionState.DONE: set(),
+    SessionState.CANCELLED: set(),
 }
 
 

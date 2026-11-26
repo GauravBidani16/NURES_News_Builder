@@ -106,3 +106,20 @@ def test_web_flow_fetch_failure_shows_paste_fallback(web_client: TestClient) -> 
         assert res_submit.status_code == 200
         assert "Could not access or extract article content" in res_submit.text
         assert "Paste Article Text Directly" in res_submit.text
+
+
+def test_web_flow_cancel_and_new_routes(web_client: TestClient) -> None:
+    # 1. GET /session/new creates a fresh session
+    res_new = web_client.get("/session/new")
+    assert res_new.status_code == 303
+    session_id = res_new.headers["location"].split("/")[-1]
+
+    # 2. POST /session/{id}/cancel cancels the session
+    res_cancel = web_client.post(f"/session/{session_id}/cancel")
+    assert res_cancel.status_code == 200
+    assert res_cancel.json() == {"status": "cancelled", "redirect": "/"}
+
+    # 3. GET /session/{id} on cancelled session redirects to /
+    res_get_cancelled = web_client.get(f"/session/{session_id}")
+    assert res_get_cancelled.status_code == 303
+    assert res_get_cancelled.headers["location"] == "/"

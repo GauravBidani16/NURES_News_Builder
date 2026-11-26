@@ -24,6 +24,7 @@ def get_service(request: Request) -> NewsPostService:
     repository = SQLiteSessionRepository(settings=settings)
     payload_builder = StandardPayloadBuilder(settings=settings)
     media_provider = WordPressMediaProvider(settings=settings)
+    task_manager = getattr(request.app.state, "task_manager", None)
 
     return NewsPostService(
         fetcher=fetcher,
@@ -34,4 +35,5 @@ def get_service(request: Request) -> NewsPostService:
         payload_builder=payload_builder,
         settings=settings,
         media_provider=media_provider,
+        task_manager=task_manager,
     )

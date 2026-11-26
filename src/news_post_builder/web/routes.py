@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, Query, Request
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
 from news_post_builder.core.models import ArticleInput, SessionState
@@ -26,6 +26,15 @@ async def index(
     return RedirectResponse(url=f"/session/{session.session_id}", status_code=303)
 
 
+@router.get("/session/new")
+async def start_new_session(
+    service: Annotated[NewsPostService, Depends(get_service)],
+) -> RedirectResponse:
+    """Convenience route to start a clean new session."""
+    session = service.create_session()
+    return RedirectResponse(url=f"/session/{session.session_id}", status_code=303)
+
+
 @router.get("/session/{session_id}")
 async def session_input_view(
     session_id: str,
@@ -33,6 +42,8 @@ async def session_input_view(
     service: Annotated[NewsPostService, Depends(get_service)],
 ) -> Response:
     session = service.get_session(session_id)
+    if session.state == SessionState.CANCELLED:
+        return RedirectResponse(url="/", status_code=303)
     if session.state == SessionState.OPTIONS_READY:
         return RedirectResponse(url=f"/session/{session_id}/options", status_code=303)
     if session.state == SessionState.PREVIEW:
@@ -48,6 +59,26 @@ async def session_input_view(
         name="index.html",
         context={"session": session},
     )
+
+
+@router.post("/session/{session_id}/cancel")
+async def cancel_session_post(
+    session_id: str,
+    service: Annotated[NewsPostService, Depends(get_service)],
+) -> JSONResponse:
+    """Cancel in-flight operations (LLM/fetch) and mark session cancelled."""
+    service.cancel(session_id)
+    return JSONResponse({"status": "cancelled", "redirect": "/"})
+
+
+@router.get("/session/{session_id}/cancel")
+async def cancel_session_get(
+    session_id: str,
+    service: Annotated[NewsPostService, Depends(get_service)],
+) -> RedirectResponse:
+    """Cancel in-flight operations and redirect to homepage for a clean new post."""
+    service.cancel(session_id)
+    return RedirectResponse(url="/", status_code=303)
 
 
 @router.post("/session/{session_id}/submit")

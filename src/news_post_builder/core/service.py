@@ -1,5 +1,6 @@
 """Service layer driving session lifecycle and domain operations."""
 
+import asyncio
 import logging
 import uuid
 from datetime import UTC, datetime
@@ -28,6 +29,7 @@ from news_post_builder.core.ports import (
     SessionRepository,
 )
 from news_post_builder.core.state_machine import transition_session
+from news_post_builder.core.task_manager import TaskManager
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +47,7 @@ class NewsPostService:
         payload_builder: PayloadBuilder,
         settings: Settings | None = None,
         media_provider: MediaProvider | None = None,
+        task_manager: TaskManager | None = None,
     ) -> None:
         self.fetcher = fetcher
         self.extractor = extractor
@@ -54,6 +57,7 @@ class NewsPostService:
         self.payload_builder = payload_builder
         self.settings = settings or get_settings()
         self.media_provider = media_provider
+        self.task_manager = task_manager or TaskManager()
 
     def create_session(self) -> SessionData:
         session = SessionData(session_id=str(uuid.uuid4()), state=SessionState.NEW)
@@ -77,89 +81,103 @@ class NewsPostService:
         session.fetch_error = None
         self.repository.save(session)
 
-        # Step 1: Fetch and Extract
-        extracted: ExtractedArticle
+        current_task = asyncio.current_task()
+        if current_task and self.task_manager:
+            self.task_manager.register(session_id, current_task)
+
         try:
-            if input_data.is_url():
-                url = input_data.url or ""
-                html, final_url = await self.fetcher.fetch_html(url)
-                extracted = self.extractor.extract(html, url=final_url)
-            elif input_data.text and input_data.text.strip():
-                extracted = self.extractor.extract_from_text(input_data.text)
-            else:
-                raise FetchError(
-                    "No article URL or text provided.",
-                    user_message="Please enter an article URL or paste the article text.",
-                )
-        except (FetchError, ExtractionError) as exc:
-            logger.warning("Fetch/Extraction failed for session %s: %s", session_id, exc)
-            session.fetch_error = exc.user_message
-            transition_session(session, SessionState.FETCH_FAILED)
-            self.repository.save(session)
-            return session
-
-        session.extracted_article = extracted
-
-        # Step 2: Generate Initial Options
-        try:
-            result = await self.llm_provider.generate_options(
-                article=extracted,
-                headline_count=self.settings.headline_count,
-                description_count=self.settings.description_count,
-            )
-            session.accumulated_headlines = result.headlines
-            session.accumulated_descriptions = result.descriptions
-            session.more_rounds_count = 0
-
-            # Step 3: Fetch Media Options
-            detect_text = " ".join(
-                filter(
-                    None,
-                    [
-                        session.input_url,
-                        extracted.source_url,
-                        extracted.title,
-                    ],
-                )
-            ).lower()
-            is_nih = "nih" in detect_text
-
-            if self.media_provider:
-                try:
-                    media_options = await self.media_provider.get_featured_media_options(
-                        search_pattern="News_Item",
-                        limit=5,
-                        is_nih=is_nih,
+            # Step 1: Fetch and Extract
+            extracted: ExtractedArticle
+            try:
+                if input_data.is_url():
+                    url = input_data.url or ""
+                    html, final_url = await self.fetcher.fetch_html(url)
+                    extracted = self.extractor.extract(html, url=final_url)
+                elif input_data.text and input_data.text.strip():
+                    extracted = self.extractor.extract_from_text(input_data.text)
+                else:
+                    raise FetchError(
+                        "No article URL or text provided.",
+                        user_message="Please enter an article URL or paste the article text.",
                     )
-                    session.media_options = media_options
-                    for m in media_options:
-                        if m.is_recommended:
-                            session.selected_media_id = m.id
-                            session.selected_media_url = m.url
-                            session.selected_media_title = m.title
-                            break
-                    if not session.selected_media_id and media_options:
-                        session.selected_media_id = media_options[0].id
-                        session.selected_media_url = media_options[0].url
-                        session.selected_media_title = media_options[0].title
-                except Exception as exc:
-                    logger.warning(
-                        "Failed to fetch media options for session %s: %s",
-                        session_id,
-                        exc,
-                    )
+            except (FetchError, ExtractionError) as exc:
+                logger.warning("Fetch/Extraction failed for session %s: %s", session_id, exc)
+                session.fetch_error = exc.user_message
+                transition_session(session, SessionState.FETCH_FAILED)
+                self.repository.save(session)
+                return session
 
-            transition_session(session, SessionState.OPTIONS_READY)
-            self.repository.save(session)
-            return session
-        except Exception as exc:
-            logger.error("LLM Generation failed for session %s: %s", session_id, exc)
-            session.fetch_error = (
-                "Failed to generate options from the article text. Please try again."
-            )
-            transition_session(session, SessionState.FETCH_FAILED)
-            self.repository.save(session)
-            return session
+            session.extracted_article = extracted
+
+            # Step 2: Generate Initial Options
+            try:
+                result = await self.llm_provider.generate_options(
+                    article=extracted,
+                    headline_count=self.settings.headline_count,
+                    description_count=self.settings.description_count,
+                )
+                session.accumulated_headlines = result.headlines
+                session.accumulated_descriptions = result.descriptions
+                session.more_rounds_count = 0
+
+                # Step 3: Fetch Media Options
+                detect_text = " ".join(
+                    filter(
+                        None,
+                        [
+                            session.input_url,
+                            extracted.source_url,
+                            extracted.title,
+                        ],
+                    )
+                ).lower()
+                is_nih = "nih" in detect_text
+
+                if self.media_provider:
+                    try:
+                        media_options = await self.media_provider.get_featured_media_options(
+                            search_pattern="News_Item",
+                            limit=5,
+                            is_nih=is_nih,
+                        )
+                        session.media_options = media_options
+                        for m in media_options:
+                            if m.is_recommended:
+                                session.selected_media_id = m.id
+                                session.selected_media_url = m.url
+                                session.selected_media_title = m.title
+                                break
+                        if not session.selected_media_id and media_options:
+                            session.selected_media_id = media_options[0].id
+                            session.selected_media_url = media_options[0].url
+                            session.selected_media_title = media_options[0].title
+                    except Exception as exc:
+                        logger.warning(
+                            "Failed to fetch media options for session %s: %s",
+                            session_id,
+                            exc,
+                        )
+
+                transition_session(session, SessionState.OPTIONS_READY)
+                self.repository.save(session)
+                return session
+            except Exception as exc:
+                logger.error("LLM Generation failed for session %s: %s", session_id, exc)
+                session.fetch_error = (
+                    "Failed to generate options from the article text. Please try again."
+                )
+                transition_session(session, SessionState.FETCH_FAILED)
+                self.repository.save(session)
+                return session
+        except asyncio.CancelledError:
+            logger.info("Session %s was cancelled by user.", session_id)
+            if session.state != SessionState.CANCELLED:
+                transition_session(session, SessionState.CANCELLED)
+                self.repository.save(session)
+            raise
+        finally:
+            if self.task_manager:
+                self.task_manager.unregister(session_id)
 
     async def request_more(self, session_id: str, target: str = "both") -> SessionData:
         session = self.get_session(session_id)
@@ -178,25 +196,49 @@ class NewsPostService:
         if not session.extracted_article:
             raise NewsBuilderError("No extracted article available for session.")
 
-        prev_h = [h.text for h in session.accumulated_headlines]
-        prev_d = [d.text for d in session.accumulated_descriptions]
+        current_task = asyncio.current_task()
+        if current_task and self.task_manager:
+            self.task_manager.register(session_id, current_task)
 
-        result = await self.llm_provider.generate_options(
-            article=session.extracted_article,
-            headline_count=self.settings.headline_count,
-            description_count=self.settings.description_count,
-            previous_headlines=prev_h,
-            previous_descriptions=prev_d,
-        )
+        try:
+            prev_h = [h.text for h in session.accumulated_headlines]
+            prev_d = [d.text for d in session.accumulated_descriptions]
 
-        if target in {"headlines", "both"}:
-            session.accumulated_headlines.extend(result.headlines)
-        if target in {"descriptions", "both"}:
-            session.accumulated_descriptions.extend(result.descriptions)
+            result = await self.llm_provider.generate_options(
+                article=session.extracted_article,
+                headline_count=self.settings.headline_count,
+                description_count=self.settings.description_count,
+                previous_headlines=prev_h,
+                previous_descriptions=prev_d,
+            )
 
-        session.more_rounds_count += 1
-        transition_session(session, SessionState.OPTIONS_READY)
-        self.repository.save(session)
+            if target in {"headlines", "both"}:
+                session.accumulated_headlines.extend(result.headlines)
+            if target in {"descriptions", "both"}:
+                session.accumulated_descriptions.extend(result.descriptions)
+
+            session.more_rounds_count += 1
+            transition_session(session, SessionState.OPTIONS_READY)
+            self.repository.save(session)
+            return session
+        except asyncio.CancelledError:
+            logger.info("Session %s request_more was cancelled by user.", session_id)
+            if session.state != SessionState.CANCELLED:
+                transition_session(session, SessionState.CANCELLED)
+                self.repository.save(session)
+            raise
+        finally:
+            if self.task_manager:
+                self.task_manager.unregister(session_id)
+
+    def cancel(self, session_id: str) -> SessionData:
+        """Cancel an active session, stopping any in-flight API or LLM calls immediately."""
+        session = self.get_session(session_id)
+        if self.task_manager:
+            self.task_manager.cancel(session_id)
+        if session.state not in {SessionState.DONE, SessionState.CANCELLED}:
+            transition_session(session, SessionState.CANCELLED)
+            self.repository.save(session)
         return session
 
     def select(
