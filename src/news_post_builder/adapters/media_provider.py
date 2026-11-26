@@ -61,13 +61,19 @@ class WordPressMediaProvider(MediaProvider):
         }
 
         fetched_items: list[MediaItem] = []
+        headers = {
+            "User-Agent": (
+                self.settings.fetch_user_agent
+                or "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+            )
+        }
         try:
             if self._custom_client:
-                resp = await self._custom_client.get(endpoint, params=params)
+                resp = await self._custom_client.get(endpoint, params=params, headers=headers)
                 data = resp.json() if resp.status_code == 200 else []
             else:
                 async with httpx.AsyncClient(timeout=4.0) as client:
-                    resp = await client.get(endpoint, params=params)
+                    resp = await client.get(endpoint, params=params, headers=headers)
                     data = resp.json() if resp.status_code == 200 else []
 
             if isinstance(data, list):

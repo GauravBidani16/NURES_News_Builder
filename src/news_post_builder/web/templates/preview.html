@@ -57,7 +57,13 @@
     <li><strong>Category:</strong> News (ID: <code>{{ preview.category_id }}</code>, Slug: <code>{{ preview.category_slug }}</code>)</li>
     <li><strong>Featured Media ID:</strong> <code>{{ preview.featured_media_id }}</code> (Set strictly as post featured image)</li>
     <li><strong>Post Status:</strong> <code>{{ preview.status }}</code></li>
-    <li><strong>Publish Mode:</strong> Dry Run (Writes payload to <code>./data/dry_run/</code>, sends zero HTTP requests)</li>
+    <li><strong>Publish Mode:</strong>
+      {% if settings and settings.wp_publish_enabled %}
+        <strong style="color: var(--success);">&#9679; Live WordPress Draft</strong> (Posts directly to WordPress as draft)
+      {% else %}
+        Dry Run (Writes payload to <code>./data/dry_run/</code>, sends zero HTTP requests)
+      {% endif %}
+    </li>
   </ul>
 </div>
 

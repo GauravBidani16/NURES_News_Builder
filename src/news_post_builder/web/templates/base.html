@@ -462,7 +462,11 @@
       <span>News Post Builder</span>
     </a>
     <div style="display: flex; align-items: center; gap: 12px;">
+      {% if settings and settings.wp_publish_enabled %}
+      <span class="badge" style="background: var(--success-bg); color: var(--success); border: 1px solid var(--success-border);">&#9679; Live Draft Publishing Enabled</span>
+      {% else %}
       <span class="badge badge-dryrun">WordPress Safe Dry-Run Mode</span>
+      {% endif %}
       <a href="/session/new" class="btn btn-secondary btn-sm" style="font-weight: 600; text-decoration: none;">
         + New Post
       </a>

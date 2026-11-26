@@ -89,6 +89,11 @@ class Settings(BaseSettings):
                 pass
         return [m.strip() for m in raw.split(",") if m.strip()]
 
+    @field_validator("wp_app_password")
+    @classmethod
+    def clean_wp_app_password(cls, v: str) -> str:
+        return v.replace(" ", "").strip()
+
     @field_validator("wp_post_status")
     @classmethod
     def validate_wp_post_status(cls, v: str) -> str:

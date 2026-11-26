@@ -9,6 +9,7 @@ import pytest
 os.environ["APP_ENV"] = "test"
 os.environ["LLM_PROVIDER"] = "mock"
 os.environ["LLM_API_KEY"] = "mock-key-for-tests"
+os.environ["WP_PUBLISH_ENABLED"] = "false"
 
 
 @pytest.fixture(autouse=True)

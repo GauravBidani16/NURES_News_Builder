@@ -108,12 +108,19 @@ class WordPressPublisher(Publisher):
         )
 
         client = self._custom_client or httpx.AsyncClient(timeout=30.0)
+        headers = {
+            "Content-Type": "application/json",
+            "User-Agent": (
+                self.settings.fetch_user_agent
+                or "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+            ),
+        }
         try:
             response = await client.post(
                 target_endpoint,
                 auth=auth,
                 json=payload_dict,
-                headers={"Content-Type": "application/json"},
+                headers=headers,
             )
             if response.status_code not in {200, 201}:
                 raise PublishError(

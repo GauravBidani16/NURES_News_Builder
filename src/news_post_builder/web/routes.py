@@ -57,7 +57,7 @@ async def session_input_view(
     return templates.TemplateResponse(
         request=request,
         name="index.html",
-        context={"session": session},
+        context={"session": session, "settings": service.settings},
     )
 
 
@@ -167,7 +167,7 @@ async def preview_view(
     return templates.TemplateResponse(
         request=request,
         name="preview.html",
-        context={"session": session, "preview": preview},
+        context={"session": session, "preview": preview, "settings": service.settings},
     )
 
 

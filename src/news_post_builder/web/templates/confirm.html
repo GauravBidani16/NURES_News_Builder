@@ -8,6 +8,7 @@
 {% block step3_class %}completed{% endblock %}
 
 {% block content %}
+{% if result.is_dry_run %}
 <div class="alert alert-success">
   <h3 style="margin-bottom: 6px; color: var(--success);">&#10004; Post Confirmed in Dry-Run Mode!</h3>
   <p>The post payload was successfully constructed and saved locally inside the project. Absolutely zero HTTP requests were sent to WordPress.</p>
@@ -25,6 +26,32 @@
   <h3 style="font-size: 1rem; margin-bottom: 8px;">Exact Payload:</h3>
   <pre><code>{{ result.payload|tojson(indent=2) }}</code></pre>
 </div>
+{% else %}
+<div class="alert alert-success">
+  <h3 style="margin-bottom: 6px; color: var(--success);">&#10004; Post Successfully Created in WordPress as Draft!</h3>
+  <p>Your post draft was securely submitted to WordPress with status <strong>draft</strong> in category <strong>News</strong>.</p>
+</div>
+
+<div class="card">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+    <h2>Live WordPress Post Details</h2>
+    {% if result.wp_post_id %}
+    <a href="https://nudvnures.wpenginepowered.com/wp-admin/post.php?post={{ result.wp_post_id }}&action=edit" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm">
+      Open in WordPress Admin &nearr;
+    </a>
+    {% endif %}
+  </div>
+  <p style="margin-bottom: 12px; font-size: 0.95rem;">
+    <strong>WordPress Post ID:</strong> <code>{{ result.wp_post_id }}</code>
+  </p>
+  <p style="margin-bottom: 20px; font-size: 0.95rem;">
+    <strong>Target Endpoint:</strong> <code>{{ result.target_endpoint }}</code>
+  </p>
+
+  <h3 style="font-size: 1rem; margin-bottom: 8px;">Submitted Payload:</h3>
+  <pre><code>{{ result.payload|tojson(indent=2) }}</code></pre>
+</div>
+{% endif %}
 
 <div style="margin-top: 28px; text-align: center;">
   <a href="/" class="btn btn-primary" style="padding: 12px 28px; font-size: 1.05rem;">Start Another News Post &rarr;</a>
