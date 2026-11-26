@@ -1,10 +1,37 @@
-# Environments and Virtualenvs
+# ==============================================================================
+# Git Ignore Rules for News Post Builder
+# ==============================================================================
+
+# --- Environments and Virtual Environments ---
 .venv/
 env/
 venv/
 ENV/
+.env.virtualenv
 
-# Python cache and byte-compiled files
+# --- Environment Secrets & API Keys ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.cert
+*.p12
+*.pfx
+
+# --- Local Databases & Data Directories ---
+data/
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+*.sqlite
+*.sqlite3
+*.sqlite-wal
+*.sqlite-shm
+
+# --- Python Bytecode & Build Artifacts ---
 __pycache__/
 *.py[cod]
 *$py.class
@@ -27,21 +54,35 @@ share/python-wheels/
 .installed.cfg
 *.egg
 
-# Testing & Linting caches
+# --- Testing, Linting & Coverage ---
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 .coverage
 htmlcov/
+coverage.xml
 
-# Local data & environment secrets
-.env
-.env.*
-!.env.example
-data/
-*.db
-*.sqlite3
+# --- Application Logs & Temp Files ---
+*.log
+logs/
+scratch/
+tmp/
+*.swp
+*.swo
+*~
 
-# OS metadata
+# --- IDE & Editor Files ---
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# --- Operating System Files (macOS & Windows) ---
 .DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
 Thumbs.db
+ehthumbs.db
