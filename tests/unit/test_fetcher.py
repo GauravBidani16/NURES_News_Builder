@@ -15,21 +15,6 @@ from news_post_builder.core.exceptions import (
 )
 
 
-@pytest.fixture(autouse=True)
-def mock_dns(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Mock socket.getaddrinfo to resolve example domains to a public IP."""
-    import socket
-
-    def mock_getaddrinfo(
-        host: str, *_args: object, **_kwargs: object
-    ) -> list[tuple[int, int, int, str, tuple[str, int]]]:
-        if host in {"127.0.0.1", "localhost", "169.254.169.254", "10.0.0.1"}:
-            return [(2, 1, 6, "", (host, 80))]
-        return [(2, 1, 6, "", ("93.184.216.34", 80))]
-
-    monkeypatch.setattr(socket, "getaddrinfo", mock_getaddrinfo)
-
-
 @pytest.mark.asyncio
 async def test_successful_html_fetch() -> None:
     target_url = "https://news.example.com/article"
