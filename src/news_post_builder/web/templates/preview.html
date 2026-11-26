@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Post Preview — News Post Builder{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom: 20px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+    <h2>Final Post Preview</h2>
+    <span class="badge badge-dryrun">WordPress Draft Target</span>
+  </div>
+  <p style="color: var(--text-muted); font-size: 0.9rem;">
+    Review the formatted post layout below before saving to dry-run payload.
+  </p>
+</div>
+
+<!-- Exact Post Layout Matching Verified Site Design -->
+<div class="card" style="padding: 40px; border-left: 4px solid var(--primary);">
+  <div class="badge-category" style="margin-bottom: 12px; text-transform: uppercase;">News</div>
+  <h1 class="nih-title">{{ preview.selected_headline }}</h1>
+  
+  <div class="article-preview-box">
+    <p class="nih-body">{{ preview.selected_description }}</p>
+    
+    {% if preview.source_url %}
+    <p style="margin-top: 18px; font-size: 0.95rem;">
+      Get more details here:<br>
+      <a href="{{ preview.source_url }}" target="_blank" rel="noopener noreferrer" class="nih-link">
+        {{ preview.selected_headline }}
+      </a>
+    </p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Post Metadata Details -->
+<div class="card" style="background: #fafbfc;">
+  <h3 style="font-size: 1rem; margin-bottom: 12px;">Publish Parameters:</h3>
+  <ul style="font-size: 0.9rem; list-style: none; line-height: 1.8;">
+    <li><strong>Target Endpoint:</strong> <code>https://nudvnures.wpenginepowered.com/wp-json/wp/v2/posts</code></li>
+    <li><strong>Category:</strong> News (ID: <code>{{ preview.category_id }}</code>)</li>
+    <li><strong>Post Status:</strong> <code>{{ preview.status }}</code></li>
+    <li><strong>Publish Mode:</strong> Dry Run (Writes payload to <code>./data/dry_run/</code>, sends zero HTTP requests)</li>
+  </ul>
+</div>
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px;">
+  <form method="POST" action="/session/{{ session.session_id }}/back">
+    <button type="submit" class="btn btn-secondary">&larr; Back to Options / Edit</button>
+  </form>
+
+  <form method="POST" action="/session/{{ session.session_id }}/confirm">
+    <button type="submit" class="btn btn-primary" style="padding: 12px 28px; font-size: 1.05rem;">
+      Confirm Post &rarr;
+    </button>
+  </form>
+</div>
+{% endblock %}

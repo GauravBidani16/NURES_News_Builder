@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Fetch Failed — News Post Builder{% endblock %}
+
+{% block content %}
+<div class="alert alert-danger">
+  <strong>Could not access or extract article content:</strong>
+  <p style="margin-top: 6px;">{{ session.fetch_error or "The target site could not be accessed or contained insufficient article text." }}</p>
+</div>
+
+<div class="card">
+  <h3>Paste Article Text Directly</h3>
+  <p style="color: var(--text-muted); margin-bottom: 20px;">
+    Per our accuracy rules, we never invent information for an article that could not be read. Please paste the article body directly below to generate suggestions.
+  </p>
+
+  <form method="POST" action="/session/{{ session.session_id }}/submit">
+    <div class="form-group">
+      <label for="text">Article Text (Minimum 300 characters):</label>
+      <textarea id="text" name="text" rows="10" required autofocus placeholder="Paste the full article body text here...">{{ session.input_text or "" }}</textarea>
+    </div>
+
+    <div style="display: flex; gap: 12px;">
+      <button type="submit" class="btn btn-primary">Generate Options from Pasted Text</button>
+      <a href="/" class="btn btn-secondary">Start Over with a New URL</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

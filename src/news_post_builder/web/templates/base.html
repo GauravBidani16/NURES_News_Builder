@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}News Post Builder{% endblock %}</title>
+  <style>
+    :root {
+      --primary: #c52227;
+      --primary-hover: #a0171b;
+      --bg: #f8f9fa;
+      --card-bg: #ffffff;
+      --text: #212529;
+      --text-muted: #6c757d;
+      --border: #e9ecef;
+      --accent: #eef2f5;
+      --success: #28a745;
+      --warning: #ffc107;
+      --danger: #dc3545;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding-bottom: 60px;
+    }
+    .navbar {
+      background: #ffffff;
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .navbar-brand {
+      font-weight: 700;
+      font-size: 1.25rem;
+      color: var(--primary);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+    .badge-dryrun { background: #e2e3e5; color: #383d41; }
+    .badge-rec { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+    .badge-category { color: var(--primary); font-weight: 600; font-size: 0.95rem; }
+    .container {
+      max-width: 900px;
+      margin: 32px auto;
+      padding: 0 16px;
+    }
+    .card {
+      background: var(--card-bg);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      padding: 28px;
+      margin-bottom: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    h1, h2, h3 { color: #111; margin-bottom: 16px; font-weight: 600; }
+    .btn {
+      display: inline-block;
+      padding: 10px 20px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.15s ease-in-out;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-secondary { background: var(--accent); color: var(--text); border: 1px solid #ced4da; }
+    .btn-secondary:hover { background: #dde2e6; }
+    .btn-sm { padding: 6px 12px; font-size: 0.85rem; }
+    .form-group { margin-bottom: 20px; }
+    label { display: block; font-weight: 600; margin-bottom: 8px; font-size: 0.9rem; }
+    input[type="text"], input[type="url"], textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ced4da;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-family: inherit;
+    }
+    input[type="text"]:focus, input[type="url"]:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(197, 34, 39, 0.15);
+    }
+    .alert {
+      padding: 16px 20px;
+      border-radius: 6px;
+      margin-bottom: 24px;
+    }
+    .alert-danger { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .alert-info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+    .option-card {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px 18px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background: #fafbfc;
+      transition: all 0.1s ease;
+    }
+    .option-card:hover { border-color: #adb5bd; }
+    .option-card.selected {
+      border-color: var(--primary);
+      background: #fffafa;
+    }
+    .option-radio { margin-top: 4px; }
+    .article-preview-box {
+      border-top: 1px solid #eee;
+      padding-top: 24px;
+      margin-top: 16px;
+    }
+    .nih-title {
+      font-size: 2.25rem;
+      font-weight: 300;
+      color: #222;
+      line-height: 1.25;
+      margin-bottom: 20px;
+    }
+    .nih-body {
+      font-size: 1.05rem;
+      color: #333;
+      margin-bottom: 20px;
+      line-height: 1.7;
+    }
+    .nih-link {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .nih-link:hover { text-decoration: underline; }
+    pre {
+      background: #212529;
+      color: #f8f9fa;
+      padding: 16px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-size: 0.9rem;
+    }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/" class="navbar-brand">
+      <span>News Post Builder</span>
+    </a>
+    <span class="badge badge-dryrun">Dry-Run Mode (WP_PUBLISH_ENABLED=false)</span>
+  </nav>
+
+  <div class="container">
+    {% block content %}{% endblock %}
+  </div>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

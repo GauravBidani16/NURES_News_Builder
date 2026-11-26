@@ -10,6 +10,7 @@ from news_post_builder.core.models import (
     GenerationResult,
     PostPreview,
     PublishResult,
+    SessionData,
     WordPressPostPayload,
 )
 
@@ -89,4 +90,16 @@ class PayloadBuilder(Protocol):
 
     def build_payload(self, preview: PostPreview) -> WordPressPostPayload:
         """Construct WordPress REST payload from preview."""
+        ...
+
+
+class SessionRepository(Protocol):
+    """Port for persisting and retrieving session state."""
+
+    def get(self, session_id: str) -> SessionData | None:
+        """Retrieve a session by its ID."""
+        ...
+
+    def save(self, session: SessionData) -> None:
+        """Save or update a session."""
         ...

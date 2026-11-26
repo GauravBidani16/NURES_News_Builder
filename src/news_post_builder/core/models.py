@@ -89,3 +89,25 @@ class PublishResult(BaseModel):
     saved_file_path: str | None = None
     wp_post_id: int | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
+class SessionData(BaseModel):
+    """Full persistent session data for an article transformation pipeline."""
+
+    session_id: str
+    state: SessionState = SessionState.NEW
+    input_url: str | None = None
+    input_text: str | None = None
+    extracted_article: ExtractedArticle | None = None
+    fetch_error: str | None = None
+    accumulated_headlines: list[HeadlineOption] = Field(default_factory=list)
+    accumulated_descriptions: list[DescriptionOption] = Field(default_factory=list)
+    more_rounds_count: int = 0
+    selected_headline: str | None = None
+    selected_description: str | None = None
+    selected_headline_id: str | None = None
+    selected_description_id: str | None = None
+    publish_key: str | None = None
+    publish_result: PublishResult | None = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))

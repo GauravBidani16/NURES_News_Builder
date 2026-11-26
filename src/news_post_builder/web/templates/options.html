@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}Select Options — News Post Builder{% endblock %}
+
+{% block content %}
+{% if session.extracted_article %}
+<div class="card" style="padding: 16px 20px; margin-bottom: 20px; background: #fdfefe;">
+  <div style="display: flex; justify-content: space-between; align-items: center;">
+    <div>
+      <span style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted); font-weight: 600;">Extracted Source Article</span>
+      <h3 style="margin: 4px 0 6px 0; font-size: 1.15rem;">{{ session.extracted_article.title or "Untitled Article" }}</h3>
+      <p style="font-size: 0.85rem; color: var(--text-muted);">
+        {% if session.extracted_article.site_name %}{{ session.extracted_article.site_name }} &bull; {% endif %}
+        {% if session.extracted_article.publish_date %}{{ session.extracted_article.publish_date }} &bull; {% endif %}
+        {{ session.extracted_article.text|length }} characters extracted
+      </p>
+    </div>
+    {% if session.extracted_article.source_url %}
+    <a href="{{ session.extracted_article.source_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm">
+      Open Original
+    </a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<form method="POST" action="/session/{{ session.session_id }}/select" id="select-form">
+  <!-- Headline Options -->
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h2>1. Select a Headline</h2>
+      <span style="font-size: 0.85rem; color: var(--text-muted);">Choose one or edit</span>
+    </div>
+
+    {% for h in session.accumulated_headlines %}
+    <div class="option-card {% if loop.first and not session.selected_headline_id or session.selected_headline_id == h.id %}selected{% endif %}"
+         onclick="selectHeadline('{{ h.id }}', '{{ h.text|escape }}')">
+      <input type="radio" name="headline_id" value="{{ h.id }}" id="h_{{ h.id }}" class="option-radio"
+             {% if loop.first and not session.selected_headline_id or session.selected_headline_id == h.id %}checked{% endif %}>
+      <div style="flex: 1;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+          <strong>{{ h.id }}</strong>
+          {% if h.is_recommended %}
+          <span class="badge badge-rec">&#9733; Top Recommendation</span>
+          {% endif %}
+        </div>
+        <div style="font-size: 1.05rem;">{{ h.text }}</div>
+      </div>
+    </div>
+    {% endfor %}
+
+    <!-- Editable Headline Field -->
+    <div class="form-group" style="margin-top: 18px;">
+      <label for="headline_text">Selected Headline (editable):</label>
+      <input type="text" id="headline_text" name="headline_text"
+             value="{{ session.selected_headline or (session.accumulated_headlines[0].text if session.accumulated_headlines else '') }}" required>
+    </div>
+  </div>
+
+  <!-- Description Options -->
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h2>2. Select a Description</h2>
+      <span style="font-size: 0.85rem; color: var(--text-muted);">1-2 lines long</span>
+    </div>
+
+    {% for d in session.accumulated_descriptions %}
+    <div class="option-card {% if loop.first and not session.selected_description_id or session.selected_description_id == d.id %}selected{% endif %}"
+         onclick="selectDescription('{{ d.id }}', '{{ d.text|escape }}')">
+      <input type="radio" name="description_id" value="{{ d.id }}" id="d_{{ d.id }}" class="option-radio"
+             {% if loop.first and not session.selected_description_id or session.selected_description_id == d.id %}checked{% endif %}>
+      <div style="flex: 1;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+          <strong>{{ d.id }}</strong>
+          {% if d.is_recommended %}
+          <span class="badge badge-rec">&#9733; Top Recommendation</span>
+          {% endif %}
+          <span style="font-size: 0.75rem; color: var(--text-muted);">({{ d.text|length }} chars)</span>
+        </div>
+        <div style="font-size: 0.95rem;">{{ d.text }}</div>
+      </div>
+    </div>
+    {% endfor %}
+
+    <!-- Editable Description Field -->
+    <div class="form-group" style="margin-top: 18px;">
+      <label for="description_text">Selected Description (editable, 1-2 lines):</label>
+      <textarea id="description_text" name="description_text" rows="3" required>{{ session.selected_description or (session.accumulated_descriptions[0].text if session.accumulated_descriptions else '') }}</textarea>
+    </div>
+  </div>
+
+  <!-- Action Bar -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px;">
+    <div style="display: flex; gap: 8px; align-items: center;">
+      <span style="font-size: 0.85rem; color: var(--text-muted); margin-right: 4px;">
+        Need more options? (Round {{ session.more_rounds_count }}/5):
+      </span>
+      <button type="submit" formaction="/session/{{ session.session_id }}/more?target=headlines" class="btn btn-secondary btn-sm"
+              {% if session.more_rounds_count >= 5 %}disabled{% endif %}>
+        + More Headlines
+      </button>
+      <button type="submit" formaction="/session/{{ session.session_id }}/more?target=descriptions" class="btn btn-secondary btn-sm"
+              {% if session.more_rounds_count >= 5 %}disabled{% endif %}>
+        + More Descriptions
+      </button>
+      <button type="submit" formaction="/session/{{ session.session_id }}/more?target=both" class="btn btn-secondary btn-sm"
+              {% if session.more_rounds_count >= 5 %}disabled{% endif %}>
+        + More Both
+      </button>
+    </div>
+
+    <button type="submit" class="btn btn-primary">
+      Review Post Preview &rarr;
+    </button>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function selectHeadline(id, text) {
+    document.getElementById('h_' + id).checked = true;
+    document.getElementById('headline_text').value = text;
+    document.querySelectorAll('[id^="h_"]').forEach(el => el.closest('.option-card').classList.remove('selected'));
+    document.getElementById('h_' + id).closest('.option-card').classList.add('selected');
+  }
+
+  function selectDescription(id, text) {
+    document.getElementById('d_' + id).checked = true;
+    document.getElementById('description_text').value = text;
+    document.querySelectorAll('[id^="d_"]').forEach(el => el.closest('.option-card').classList.remove('selected'));
+    document.getElementById('d_' + id).closest('.option-card').classList.add('selected');
+  }
+</script>
+{% endblock %}

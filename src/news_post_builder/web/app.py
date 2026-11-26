@@ -9,6 +9,8 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
 from news_post_builder.config import Settings, get_settings
+from news_post_builder.core.exceptions import NewsBuilderError
+from news_post_builder.web.routes import router
 
 logger = logging.getLogger("news_post_builder")
 
@@ -38,6 +40,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     if settings is not None:
         app.state.settings = settings
+
+    app.include_router(router)
+
+    @app.exception_handler(NewsBuilderError)
+    async def domain_error_handler(request: Any, exc: NewsBuilderError) -> JSONResponse:
+        logger.warning("Domain error on %s: %s", getattr(request, "url", ""), exc)
+        return JSONResponse(
+            status_code=400,
+            content={"error": exc.user_message, "detail": str(exc)},
+        )
 
     @app.get("/health")
     async def health_check() -> JSONResponse:

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Post Confirmed — News Post Builder{% endblock %}
+
+{% block content %}
+<div class="alert alert-success">
+  <h3 style="margin-bottom: 6px; color: #155724;">&#10004; Post Confirmed in Dry-Run Mode!</h3>
+  <p>The post payload was successfully constructed and saved locally inside the project. Absolutely zero HTTP requests were sent to WordPress.</p>
+</div>
+
+<div class="card">
+  <h2>Saved Dry-Run Output</h2>
+  <p style="margin-bottom: 14px;">
+    <strong>Payload File:</strong> <code>{{ result.saved_file_path }}</code>
+  </p>
+  <p style="margin-bottom: 20px;">
+    <strong>Target WordPress Endpoint:</strong> <code>{{ result.target_endpoint }}</code>
+  </p>
+
+  <h3 style="font-size: 1rem; margin-bottom: 8px;">Exact Payload:</h3>
+  <pre><code>{{ result.payload|tojson(indent=2) }}</code></pre>
+</div>
+
+<div style="margin-top: 28px; text-align: center;">
+  <a href="/" class="btn btn-primary">Start Another News Post</a>
+</div>
+{% endblock %}

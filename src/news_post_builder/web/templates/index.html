@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}New Post — News Post Builder{% endblock %}
+
+{% block content %}
+<div class="card">
+  <h2>Create WordPress News Post</h2>
+  <p style="color: var(--text-muted); margin-bottom: 24px;">
+    Paste an article link to automatically extract content and generate headline and description options.
+  </p>
+
+  <form method="POST" action="/session/{{ session.session_id }}/submit">
+    <div class="form-group">
+      <label for="url">Article URL (Recommended):</label>
+      <input type="url" id="url" name="url" placeholder="https://example.com/news/article" autofocus>
+    </div>
+
+    <div style="margin: 20px 0; text-align: center; position: relative;">
+      <hr style="border: 0; border-top: 1px solid #ddd;">
+      <span style="position: absolute; top: -11px; background: #fff; padding: 0 14px; color: var(--text-muted); font-size: 0.85rem;">
+        OR PASTE TEXT FALLBACK
+      </span>
+    </div>
+
+    <div class="form-group">
+      <label for="text">Article Text:</label>
+      <textarea id="text" name="text" rows="6" placeholder="Paste article headline and body text here..."></textarea>
+    </div>
+
+    <button type="submit" class="btn btn-primary" style="width: 100%;">
+      Fetch &amp; Generate Options
+    </button>
+  </form>
+</div>
+{% endblock %}
