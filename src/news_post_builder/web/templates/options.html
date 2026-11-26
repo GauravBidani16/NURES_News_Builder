@@ -27,7 +27,7 @@
 </div>
 {% endif %}
 
-<form method="POST" action="/session/{{ session.session_id }}/select" id="select-form">
+<form method="POST" action="/select" id="select-form">
   <!-- Headline Options -->
   <div class="card">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
@@ -146,22 +146,22 @@
       <span style="font-size: 0.85rem; color: var(--text-muted); margin-right: 4px;">
         Need more options? (Round {{ session.more_rounds_count }}/5):
       </span>
-      <button type="submit" formaction="/session/{{ session.session_id }}/more?target=headlines"
+      <button type="submit" formaction="/more?target=headlines"
               class="btn btn-secondary btn-sm" onclick="showMoreLoading(this)"
               {% if session.more_rounds_count >= 5 %}disabled{% endif %}>
         + More Headlines
       </button>
-      <button type="submit" formaction="/session/{{ session.session_id }}/more?target=descriptions"
+      <button type="submit" formaction="/more?target=descriptions"
               class="btn btn-secondary btn-sm" onclick="showMoreLoading(this)"
               {% if session.more_rounds_count >= 5 %}disabled{% endif %}>
         + More Descriptions
       </button>
-      <button type="submit" formaction="/session/{{ session.session_id }}/more?target=both"
+      <button type="submit" formaction="/more?target=both"
               class="btn btn-secondary btn-sm" onclick="showMoreLoading(this)"
               {% if session.more_rounds_count >= 5 %}disabled{% endif %}>
         + More Both
       </button>
-      <a href="/session/new" class="btn btn-secondary btn-sm" style="color: var(--text-muted); margin-left: 6px;">
+      <a href="/new" class="btn btn-secondary btn-sm" style="color: var(--text-muted); margin-left: 6px;">
         &#10006; Discard &amp; New
       </a>
     </div>

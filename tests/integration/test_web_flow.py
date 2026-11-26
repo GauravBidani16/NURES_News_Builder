@@ -26,8 +26,8 @@ def web_client(tmp_path: Path) -> TestClient:
 @respx.mock
 def test_web_flow_from_start_to_confirm(web_client: TestClient) -> None:
     respx.get("https://nudvnures.wpenginepowered.com/wp-json/wp/v2/media").respond(200, json=[])
-    # 1. GET / redirects to new session
-    res_index = web_client.get("/")
+    # 1. GET /session/new redirects to new session
+    res_index = web_client.get("/session/new")
     assert res_index.status_code == 303
     redirect_url = res_index.headers["location"]
     session_id = redirect_url.split("/")[-1]
@@ -92,7 +92,7 @@ def test_web_flow_from_start_to_confirm(web_client: TestClient) -> None:
 
 
 def test_web_flow_fetch_failure_shows_paste_fallback(web_client: TestClient) -> None:
-    res_index = web_client.get("/")
+    res_index = web_client.get("/session/new")
     session_id = res_index.headers["location"].split("/")[-1]
 
     with respx.mock(using="httpx") as respx_mock:

@@ -10,7 +10,7 @@
     Paste a news link to automatically extract content, discover WordPress featured images, and generate headline and description options.
   </p>
 
-  <form method="POST" action="/session/{{ session.session_id }}/submit" id="article-form" onsubmit="handleFormSubmit(event)">
+  <form method="POST" action="/submit" id="article-form" onsubmit="handleFormSubmit(event)">
     <div class="form-group">
       <label for="url">Article URL (Recommended):</label>
       <input type="url" id="url" name="url" placeholder="https://example.com/news/article" autofocus autocomplete="off">
@@ -170,11 +170,11 @@
     }
     if (timerInterval) clearInterval(timerInterval);
     try {
-      await fetch('/session/{{ session.session_id }}/cancel', { method: 'POST' });
+      await fetch('/cancel', { method: 'POST' });
     } catch (err) {
       console.warn('Cancel signal sent:', err);
     }
-    window.location.href = '/session/new';
+    window.location.href = '/new';
   }
 </script>
 {% endblock %}

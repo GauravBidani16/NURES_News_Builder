@@ -78,11 +78,11 @@
 </div>
 
 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px; flex-wrap: wrap; gap: 14px;">
-  <form method="POST" action="/session/{{ session.session_id }}/back">
+  <form method="POST" action="/back">
     <button type="submit" class="btn btn-secondary">&larr; Back to Options / Edit</button>
   </form>
 
-  <form method="POST" action="/session/{{ session.session_id }}/confirm" onsubmit="return confirmPublish(event)">
+  <form method="POST" action="/confirm" onsubmit="return confirmPublish(event)">
     <button type="submit" id="confirm-publish-btn" class="btn btn-primary" style="padding: 12px 28px; font-size: 1.05rem;">
       {% if settings and settings.wp_publish_enabled %}
       Publish Live to WordPress &rarr;

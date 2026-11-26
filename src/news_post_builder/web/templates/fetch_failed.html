@@ -15,7 +15,7 @@
     Per our accuracy rules, we never invent information for an article that could not be read. Please paste the article body directly below to generate suggestions.
   </p>
 
-  <form method="POST" action="/session/{{ session.session_id }}/submit">
+  <form method="POST" action="/submit">
     <div class="form-group">
       <label for="text">Article Text (Minimum 300 characters):</label>
       <textarea id="text" name="text" rows="10" required autofocus placeholder="Paste the full article body text here...">{{ session.input_text or "" }}</textarea>
@@ -23,7 +23,7 @@
 
     <div style="display: flex; gap: 12px; flex-wrap: wrap;">
       <button type="submit" class="btn btn-primary">Generate Options from Pasted Text</button>
-      <a href="/" class="btn btn-secondary">Start Over with a New URL</a>
+      <a href="/new" class="btn btn-secondary">Start Over with a New URL</a>
     </div>
   </form>
 </div>
