@@ -61,6 +61,18 @@ class Settings(BaseSettings):
         default="both", alias="WP_CONTENT_MAP"
     )
 
+    # Featured Media Settings
+    wp_featured_media_nih_id: int = Field(default=4732, alias="WP_FEATURED_MEDIA_NIH_ID")
+    wp_featured_media_default_id: int = Field(default=4749, alias="WP_FEATURED_MEDIA_DEFAULT_ID")
+    wp_featured_media_nih_url: str = Field(
+        default="https://nudvnures.wpenginepowered.com/wp-content/uploads/2026/02/nih_logo.png",
+        alias="WP_FEATURED_MEDIA_NIH_URL",
+    )
+    wp_featured_media_default_url: str = Field(
+        default="https://nudvnures.wpenginepowered.com/wp-content/uploads/2026/03/martin-martz-7ELYu7jeEwo-unsplash.jpg",
+        alias="WP_FEATURED_MEDIA_DEFAULT_URL",
+    )
+
     @property
     def fallback_models_list(self) -> list[str]:
         raw = self.llm_fallback_models.strip()

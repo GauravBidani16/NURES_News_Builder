@@ -39,5 +39,5 @@ class StandardPayloadBuilder(PayloadBuilder):
             content=content_html,
             status=self.settings.wp_post_status,
             categories=[category_id],
-            featured_media=None,
+            featured_media=preview.featured_media_id,
         )

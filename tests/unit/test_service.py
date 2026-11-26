@@ -82,10 +82,21 @@ async def test_full_service_lifecycle_with_pasted_text(test_service: NewsPostSer
     assert session.state == SessionState.PREVIEW
     assert session.selected_headline == "Selected Custom Headline"
 
-    # 5. Preview
+    # 5. Preview (Non-NIH text gets default media ID 4749)
     preview = test_service.get_preview(session.session_id)
     assert preview.selected_headline == "Selected Custom Headline"
     assert preview.category_id == 31
+    assert preview.featured_media_id == 4749
+
+    # Test NIH URL gets NIH media ID 4732
+    nih_session = test_service.create_session()
+    nih_session.input_url = "https://grants.nih.gov/notice/123"
+    nih_session.state = SessionState.OPTIONS_READY
+    nih_session.selected_headline = "NIH Notice"
+    nih_session.selected_description = "NIH Description."
+    test_service.repository.save(nih_session)
+    nih_preview = test_service.get_preview(nih_session.session_id)
+    assert nih_preview.featured_media_id == 4732
 
     # 6. Confirm (Dry-Run)
     session, result = await test_service.confirm(session.session_id)

@@ -15,6 +15,13 @@
 
 <!-- Exact Post Layout Matching Verified Site Design -->
 <div class="card" style="padding: 40px; border-left: 4px solid var(--primary);">
+  {% if preview.featured_media_url %}
+  <div style="margin-bottom: 24px; text-align: center; background: #fafbfc; padding: 14px; border-radius: 6px; border: 1px solid #edf0f2;">
+    <span style="display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; font-weight: 600;">Featured Image Preview (WordPress Media ID: {{ preview.featured_media_id }})</span>
+    <img src="{{ preview.featured_media_url }}" alt="Featured Image" style="max-height: 200px; max-width: 100%; object-fit: contain; border-radius: 4px;">
+  </div>
+  {% endif %}
+
   <div class="badge-category" style="margin-bottom: 12px; text-transform: uppercase;">News</div>
   <h1 class="nih-title">{{ preview.selected_headline }}</h1>
   
@@ -38,6 +45,7 @@
   <ul style="font-size: 0.9rem; list-style: none; line-height: 1.8;">
     <li><strong>Target Endpoint:</strong> <code>https://nudvnures.wpenginepowered.com/wp-json/wp/v2/posts</code></li>
     <li><strong>Category:</strong> News (ID: <code>{{ preview.category_id }}</code>)</li>
+    <li><strong>Featured Media ID:</strong> <code>{{ preview.featured_media_id }}</code></li>
     <li><strong>Post Status:</strong> <code>{{ preview.status }}</code></li>
     <li><strong>Publish Mode:</strong> Dry Run (Writes payload to <code>./data/dry_run/</code>, sends zero HTTP requests)</li>
   </ul>

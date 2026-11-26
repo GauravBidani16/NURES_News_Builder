@@ -189,12 +189,39 @@ class NewsPostService:
             )
         category_id = self.settings.wp_news_category_id or 31
         source_url = session.extracted_article.source_url if session.extracted_article else None
+
+        # Determine featured media based on NIH indicator
+        detect_text = " ".join(
+            filter(
+                None,
+                [
+                    session.input_url,
+                    source_url,
+                    session.extracted_article.title if session.extracted_article else None,
+                ],
+            )
+        ).lower()
+
+        is_nih = "nih" in detect_text
+        featured_id = (
+            self.settings.wp_featured_media_nih_id
+            if is_nih
+            else self.settings.wp_featured_media_default_id
+        )
+        featured_url = (
+            self.settings.wp_featured_media_nih_url
+            if is_nih
+            else self.settings.wp_featured_media_default_url
+        )
+
         return PostPreview(
             selected_headline=session.selected_headline,
             selected_description=session.selected_description,
             category_id=category_id,
             category_slug=self.settings.wp_news_category_slug,
             source_url=source_url,
+            featured_media_id=featured_id,
+            featured_media_url=featured_url,
             status=self.settings.wp_post_status,
         )
 

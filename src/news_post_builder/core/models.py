@@ -66,6 +66,8 @@ class PostPreview(BaseModel):
     category_id: int
     category_slug: str
     source_url: str | None = None
+    featured_media_id: int | None = None
+    featured_media_url: str | None = None
     status: str = "draft"
 
 
