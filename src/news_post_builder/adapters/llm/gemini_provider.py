@@ -42,7 +42,7 @@ class GeminiLLMProvider(LLMProvider):
             http_options={"api_version": "v1beta"},
         )
 
-    async def _call_api_with_backoff(self, prompt: str) -> str:
+    async def _call_api_with_backoff(self, model_name: str, prompt: str) -> str:
         """Call Gemini API with exponential backoff on 429/5xx errors."""
         retries = self.settings.llm_max_retries
         base_delay = 1.0
@@ -55,12 +55,12 @@ class GeminiLLMProvider(LLMProvider):
                     temperature=0.4,
                 )
                 response = await self.client.aio.models.generate_content(
-                    model=self.settings.llm_model,
+                    model=model_name,
                     contents=prompt,
                     config=config,
                 )
                 if not response.text:
-                    raise LLMError("Gemini returned empty response text.")
+                    raise LLMError(f"Model '{model_name}' returned empty response text.")
                 return response.text
             except APIError as exc:
                 status_code = getattr(exc, "code", None)
@@ -69,8 +69,9 @@ class GeminiLLMProvider(LLMProvider):
                     jitter = random.uniform(0.1, 0.5)
                     delay = (base_delay * (2**attempt)) + jitter
                     logger.warning(
-                        "Gemini API error %s on attempt %d/%d; retrying in %.2fs: %s",
+                        "Gemini API error %s on model %s (attempt %d/%d); retrying in %.2fs: %s",
                         status_code,
+                        model_name,
                         attempt + 1,
                         retries,
                         delay,
@@ -79,7 +80,7 @@ class GeminiLLMProvider(LLMProvider):
                     await asyncio.sleep(delay)
                     continue
                 raise LLMError(
-                    f"Gemini API error ({status_code}): {exc}",
+                    f"Gemini API error ({status_code}) on {model_name}: {exc}",
                     user_message="The AI generation service encountered an error. Please retry.",
                 ) from exc
             except Exception as exc:
@@ -87,33 +88,23 @@ class GeminiLLMProvider(LLMProvider):
                     await asyncio.sleep(base_delay * (2**attempt))
                     continue
                 raise LLMError(
-                    f"Unexpected error communicating with Gemini: {exc}",
+                    f"Unexpected error communicating with Gemini model {model_name}: {exc}",
                     user_message="Failed to generate options from the AI service.",
                 ) from exc
 
-        raise LLMError("Exceeded maximum retries calling Gemini API.")
+        raise LLMError(f"Exceeded maximum retries calling Gemini API with {model_name}.")
 
-    async def generate_options(
+    async def _generate_with_model(
         self,
-        article: ExtractedArticle,
-        headline_count: int = 3,
-        description_count: int = 3,
-        previous_headlines: list[str] | None = None,
-        previous_descriptions: list[str] | None = None,
+        model_name: str,
+        prompt: str,
+        headline_count: int,
+        description_count: int,
+        previous_headlines: list[str] | None,
+        previous_descriptions: list[str] | None,
     ) -> GenerationResult:
-        """Generate headline and description options with automatic retry on malformed output."""
-        prompt = self.prompt_manager.format_prompt(
-            article=article,
-            version=self.settings.prompt_version,
-            headline_count=headline_count,
-            description_count=description_count,
-            max_description_chars=self.settings.description_max_chars,
-            previous_headlines=previous_headlines,
-            previous_descriptions=previous_descriptions,
-        )
-
         # Attempt 1
-        raw_text = await self._call_api_with_backoff(prompt)
+        raw_text = await self._call_api_with_backoff(model_name, prompt)
         try:
             output_model, raw_data = parse_and_validate_llm_json(
                 raw_text,
@@ -121,7 +112,11 @@ class GeminiLLMProvider(LLMProvider):
                 max_sentences=2,
             )
         except ValueError as first_err:
-            logger.warning("First LLM output parsing failed: %s. Retrying once...", first_err)
+            logger.warning(
+                "First LLM output parsing failed for %s: %s. Retrying once...",
+                model_name,
+                first_err,
+            )
             # Corrective retry prompt
             retry_prompt = (
                 f"{prompt}\n\n"
@@ -129,7 +124,7 @@ class GeminiLLMProvider(LLMProvider):
                 f"Return strictly valid JSON. Every description must be at most 2 sentences "
                 f"and under {self.settings.description_max_chars} characters."
             )
-            raw_text = await self._call_api_with_backoff(retry_prompt)
+            raw_text = await self._call_api_with_backoff(model_name, retry_prompt)
             try:
                 output_model, raw_data = parse_and_validate_llm_json(
                     raw_text,
@@ -138,7 +133,7 @@ class GeminiLLMProvider(LLMProvider):
                 )
             except ValueError as second_err:
                 raise LLMError(
-                    f"LLM returned invalid output after retry: {second_err}",
+                    f"Model {model_name} returned invalid output after retry: {second_err}",
                     user_message="The AI response could not be validated. Please try again.",
                 ) from second_err
 
@@ -164,9 +159,60 @@ class GeminiLLMProvider(LLMProvider):
             for i, d in enumerate(output_model.descriptions[:description_count])
         ]
 
+        raw_data["model_used"] = model_name
+
         return GenerationResult(
             headlines=headlines,
             descriptions=descriptions,
             prompt_version=self.settings.prompt_version,
             raw_response=raw_data,
+        )
+
+    async def generate_options(
+        self,
+        article: ExtractedArticle,
+        headline_count: int = 3,
+        description_count: int = 3,
+        previous_headlines: list[str] | None = None,
+        previous_descriptions: list[str] | None = None,
+    ) -> GenerationResult:
+        """Generate headline and description options with fallback model redundancy."""
+        prompt = self.prompt_manager.format_prompt(
+            article=article,
+            version=self.settings.prompt_version,
+            headline_count=headline_count,
+            description_count=description_count,
+            max_description_chars=self.settings.description_max_chars,
+            previous_headlines=previous_headlines,
+            previous_descriptions=previous_descriptions,
+        )
+
+        models_to_try = [self.settings.llm_model]
+        for fallback_model in self.settings.fallback_models_list:
+            if fallback_model not in models_to_try:
+                models_to_try.append(fallback_model)
+
+        last_error: Exception | None = None
+
+        for model_name in models_to_try:
+            try:
+                return await self._generate_with_model(
+                    model_name=model_name,
+                    prompt=prompt,
+                    headline_count=headline_count,
+                    description_count=description_count,
+                    previous_headlines=previous_headlines,
+                    previous_descriptions=previous_descriptions,
+                )
+            except Exception as exc:
+                last_error = exc
+                logger.warning(
+                    "Model '%s' failed (%s). Attempting next fallback model...",
+                    model_name,
+                    exc,
+                )
+
+        raise LLMError(
+            f"All configured LLM models failed. Last error: {last_error}",
+            user_message="All available AI models failed to generate options. Please try again.",
         )

@@ -26,7 +26,11 @@ class Settings(BaseSettings):
 
     # LLM Settings
     llm_provider: LLMProviderType = Field(default="gemini", alias="LLM_PROVIDER")
-    llm_model: str = Field(default="gemini-2.5-flash", alias="LLM_MODEL")
+    llm_model: str = Field(default="gemini-3.5-flash-lite", alias="LLM_MODEL")
+    llm_fallback_models: str = Field(
+        default="gemini-2.5-flash,gemini-2.5-flash-lite",
+        alias="LLM_FALLBACK_MODELS",
+    )
     llm_api_key: str = Field(default="", alias="LLM_API_KEY")
     llm_timeout_seconds: int = Field(default=60, alias="LLM_TIMEOUT_SECONDS")
     llm_max_retries: int = Field(default=3, alias="LLM_MAX_RETRIES")
@@ -56,6 +60,22 @@ class Settings(BaseSettings):
     wp_content_map: Literal["both", "content", "excerpt"] = Field(
         default="both", alias="WP_CONTENT_MAP"
     )
+
+    @property
+    def fallback_models_list(self) -> list[str]:
+        raw = self.llm_fallback_models.strip()
+        if not raw:
+            return []
+        if raw.startswith("[") and raw.endswith("]"):
+            import json
+
+            try:
+                parsed = json.loads(raw)
+                if isinstance(parsed, list):
+                    return [str(m).strip() for m in parsed if str(m).strip()]
+            except Exception:
+                pass
+        return [m.strip() for m in raw.split(",") if m.strip()]
 
     @field_validator("wp_post_status")
     @classmethod

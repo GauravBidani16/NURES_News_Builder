@@ -6,7 +6,6 @@ import pytest
 
 from news_post_builder.adapters.llm.gemini_provider import GeminiLLMProvider
 from news_post_builder.config import Settings
-from news_post_builder.core.exceptions import LLMError
 from news_post_builder.core.models import ExtractedArticle
 
 
@@ -94,16 +93,39 @@ async def test_retry_on_invalid_json(
 
 
 @pytest.mark.asyncio
-async def test_double_invalid_json_raises_llm_error(
+async def test_fallback_model_used_when_primary_fails(
     mock_genai_client: MagicMock, sample_article: ExtractedArticle
 ) -> None:
-    bad_response = MagicMock(text="Broken JSON")
-    mock_genai_client.aio.models.generate_content = AsyncMock(return_value=bad_response)
+    from google.genai.errors import APIError
 
-    settings = Settings(APP_ENV="test", LLM_PROVIDER="mock", LLM_API_KEY="test_key")
+    good_json = """
+    {
+      "headlines": ["H1", "H2", "H3"],
+      "descriptions": ["D1.", "D2.", "D3."],
+      "recommended_headline_index": 0,
+      "recommended_description_index": 0
+    }
+    """
+    good_response = MagicMock(text=good_json)
+
+    # Primary model fails with 404/model not found or similar, fallback model succeeds
+    mock_genai_client.aio.models.generate_content = AsyncMock(
+        side_effect=[
+            APIError(404, "Model not found"),
+            good_response,
+        ]
+    )
+
+    settings = Settings(
+        APP_ENV="test",
+        LLM_PROVIDER="mock",
+        LLM_API_KEY="test_key",
+        LLM_MODEL="gemini-3.5-flash-lite",
+        LLM_FALLBACK_MODELS="gemini-2.5-flash",
+    )
     provider = GeminiLLMProvider(settings=settings, client=mock_genai_client)
 
-    with pytest.raises(LLMError) as exc_info:
-        await provider.generate_options(sample_article)
-    assert "invalid output after retry" in str(exc_info.value)
-    assert mock_genai_client.aio.models.generate_content.call_count == 2
+    result = await provider.generate_options(sample_article)
+    assert len(result.headlines) == 3
+    assert result.raw_response is not None
+    assert result.raw_response.get("model_used") == "gemini-2.5-flash"
