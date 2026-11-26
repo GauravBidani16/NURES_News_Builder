@@ -121,7 +121,7 @@ async def options_view(
     return templates.TemplateResponse(
         request=request,
         name="options.html",
-        context={"session": session},
+        context={"session": session, "settings": service.settings},
     )
 
 
