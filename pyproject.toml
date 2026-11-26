@@ -72,6 +72,9 @@ addopts = "-ra -q"
 testpaths = ["tests"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+filterwarnings = [
+    "ignore::urllib3.exceptions.DependencyWarning",
+]
 markers = [
     "live: marks tests as live network/LLM calls (deselected by default)",
 ]
