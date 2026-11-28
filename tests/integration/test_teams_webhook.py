@@ -87,6 +87,29 @@ def test_teams_webhook_help_command(teams_client: TestClient) -> None:
     assert "Hi! I am the NURES News Post Builder Bot" in data["text"]
 
 
+def test_teams_webhook_wake_command(teams_client: TestClient) -> None:
+    payload: dict[str, Any] = {
+        "type": "message",
+        "text": "<at>NewsBot</at> wake",
+        "from": {"name": "Gaurav"},
+    }
+    raw_body = json.dumps(payload).encode("utf-8")
+    auth_header = compute_test_hmac(raw_body, TEST_SECRET_B64)
+
+    res = teams_client.post(
+        "/api/webhooks/teams",
+        content=raw_body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": auth_header,
+        },
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["type"] == "message"
+    assert "I am awake and ready" in data["text"]
+
+
 @respx.mock
 def test_teams_webhook_url_submission_and_publish(teams_client: TestClient) -> None:
     # Mock external WordPress media call

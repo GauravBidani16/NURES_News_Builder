@@ -311,6 +311,7 @@ async def handle_teams_webhook(
             "👋 **Hi! I am the NURES News Post Builder Bot.**\n\n"
             "Here is how you can use me:\n"
             "• **Generate suggestions:** `@NewsBot https://...` (paste news link)\n"
+            "• **Check status / wake:** `@NewsBot wake`\n"
             "• **Get more choices:** `@NewsBot more` (or `@NewsBot more headlines`)\n"
             "• **Publish latest:** `@NewsBot publish`\n"
             "• **Publish specific post:** `@NewsBot publish <session_id>`\n"
@@ -319,7 +320,16 @@ async def handle_teams_webhook(
         )
         return JSONResponse(build_simple_message(help_msg))
 
-    # 2. Check for Publish / Confirm command
+    # 2. Check for Wake / Ping / Status command
+    if any(t.lower() in {"wake", "ping", "status", "alive"} for t in tokens):
+        wake_msg = (
+            "🟢 **I am awake and ready!**\n\n"
+            "Paste any news article link to get started:\n"
+            "`@NewsBot https://...`"
+        )
+        return JSONResponse(build_simple_message(wake_msg))
+
+    # 3. Check for Publish / Confirm command
     publish_idx = next(
         (i for i, t in enumerate(tokens) if t.lower() in {"publish", "confirm"}),
         None,
