@@ -178,3 +178,48 @@ def test_teams_webhook_url_submission_and_publish(teams_client: TestClient) -> N
         for item in block.get("items", [block])
     )
     assert found_success
+
+
+@respx.mock
+def test_teams_webhook_hyperlinked_title_url_extraction(teams_client: TestClient) -> None:
+    respx.get("https://nudvnures.wpenginepowered.com/wp-json/wp/v2/media").respond(200, json=[])
+    sample_article_html = (
+        "<html><body><h1>Clinical Breakthrough in Autoimmune Disorders</h1>"
+        "<p>Researchers have identified a novel therapeutic target for autoimmune disorders in a "
+        "comprehensive multi-year study published today. The clinical findings represent a "
+        "significant step forward in personalized medicine for millions of patients worldwide. "
+        "Further Phase II clinical trials are scheduled to commence early next year "
+        "across multiple leading university medical centers, with approvals already in place.</p>"
+        "</body></html>"
+    )
+    respx.get("https://grants.nih.gov/notice.html").respond(
+        200,
+        text=sample_article_html,
+        headers={"content-type": "text/html"},
+    )
+
+    # Teams automatically formats pasted URL into a rich title hyperlink
+    payload: dict[str, Any] = {
+        "type": "message",
+        "text": (
+            '<p><at>NewsBot</at> <a href="https://grants.nih.gov/notice.html">'
+            "NOT-OD-26-131: NIH Operates Under a Continuing Resolution</a></p>"
+        ),
+        "from": {"name": "Gaurav"},
+    }
+    raw_body = json.dumps(payload).encode("utf-8")
+    auth_header = compute_test_hmac(raw_body, TEST_SECRET_B64)
+
+    res = teams_client.post(
+        "/api/webhooks/teams",
+        content=raw_body,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": auth_header,
+        },
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert "attachments" in data
+    card = data["attachments"][0]["content"]
+    assert card["type"] == "AdaptiveCard"

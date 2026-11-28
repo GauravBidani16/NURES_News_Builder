@@ -264,8 +264,19 @@ async def handle_teams_webhook(
     raw_text = payload.get("text", "")
     sender_name = payload.get("from", {}).get("name", "User")
 
-    # Clean text: strip HTML entities, <at> tags, any HTML tags, and literal @NewsBot mentions
+    # Clean text:
+    # 1. Unescape HTML entities
     clean_text = html.unescape(raw_text)
+
+    # 2. Extract and preserve URLs from <a href="..."> hyperlinks created by Teams
+    clean_text = re.sub(
+        r'<a\s+(?:[^>]*?\s+)?href=["\'](https?://[^"\'>\s]+)["\'][^>]*>(?:.*?</a>)?',
+        r" \1 ",
+        clean_text,
+        flags=re.IGNORECASE,
+    )
+
+    # 3. Strip <at> tags, any remaining HTML tags, and literal @NewsBot mentions
     clean_text = re.sub(r"<at[^>]*>.*?</at>", "", clean_text, flags=re.IGNORECASE)
     clean_text = re.sub(r"<[^>]+>", "", clean_text)
     clean_text = re.sub(r"@?newsbot", "", clean_text, flags=re.IGNORECASE).strip()
