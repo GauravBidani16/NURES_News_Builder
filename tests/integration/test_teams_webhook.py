@@ -150,7 +150,32 @@ def test_teams_webhook_url_submission_and_publish(teams_client: TestClient) -> N
     # Extract session ID from action URL
     session_id = action["url"].split("session_id=")[1]
 
-    # 2. User confirms/publishes post with custom options (H2 D2) directly from Teams
+    # 2. User requests more options directly in Teams
+    more_payload: dict[str, Any] = {
+        "type": "message",
+        "text": f"<at>NewsBot</at> more {session_id[:8]}",
+        "from": {"name": "Gaurav"},
+    }
+    raw_body_more = json.dumps(more_payload).encode("utf-8")
+    auth_header_more = compute_test_hmac(raw_body_more, TEST_SECRET_B64)
+
+    res_more = teams_client.post(
+        "/api/webhooks/teams",
+        content=raw_body_more,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": auth_header_more,
+        },
+    )
+    assert res_more.status_code == 200
+    more_data = res_more.json()
+    assert "attachments" in more_data
+    more_card = more_data["attachments"][0]["content"]
+    more_card_text = " ".join(item.get("text", "") for item in more_card["body"])
+    assert "H4:" in more_card_text
+    assert "D4:" in more_card_text
+
+    # 3. User confirms/publishes post with custom options (H2 D2) directly from Teams
     publish_payload: dict[str, Any] = {
         "type": "message",
         "text": f"<at>NewsBot</at> publish {session_id[:8]} H2 D2",

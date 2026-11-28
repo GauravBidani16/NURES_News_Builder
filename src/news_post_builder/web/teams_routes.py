@@ -142,7 +142,8 @@ def build_suggestion_adaptive_card(
             "type": "TextBlock",
             "text": (
                 f"💡 **Publish recommended:** `@NewsBot publish {session_id[:8]}`\n"
-                f"💡 **Publish custom picks:** `@NewsBot publish {session_id[:8]} H2 D3`"
+                f"💡 **Publish custom picks:** `@NewsBot publish {session_id[:8]} H2 D3`\n"
+                f"💡 **Get more choices:** `@NewsBot more`"
             ),
             "wrap": True,
             "spacing": "Medium",
@@ -291,6 +292,7 @@ async def handle_teams_webhook(
             "👋 **Hi! I am the NURES News Post Builder Bot.**\n\n"
             "Here is how you can use me:\n"
             "• **Generate suggestions:** `@NewsBot https://...` (paste news link)\n"
+            "• **Get more choices:** `@NewsBot more` (or `@NewsBot more headlines`)\n"
             "• **Publish latest:** `@NewsBot publish`\n"
             "• **Publish specific post:** `@NewsBot publish <session_id>`\n"
             "• **Publish custom picks:** `@NewsBot publish <session_id> H2 D3`\n"
@@ -392,7 +394,53 @@ async def handle_teams_webhook(
             logger.error("Failed to publish via Teams command: %s", exc)
             return JSONResponse(build_simple_message(f"⚠️ Could not publish post: {exc}"))
 
-    # 3. Check for Cancel command
+    # 3. Check for More Options command
+    if any(t.lower() == "more" for t in tokens):
+        target = "both"
+        if any(t.lower() in {"headlines", "headline", "h"} for t in tokens):
+            target = "headlines"
+        elif any(t.lower() in {"descriptions", "description", "d"} for t in tokens):
+            target = "descriptions"
+
+        cmd_words = {
+            "more",
+            "both",
+            "headlines",
+            "headline",
+            "h",
+            "descriptions",
+            "description",
+            "d",
+            "options",
+        }
+        prefix = next((t for t in tokens if t.lower() not in cmd_words), None)
+
+        try:
+            if prefix:
+                session = service.get_session_by_prefix(prefix)
+            else:
+                session = service.get_latest_session()
+
+            updated_session = await service.request_more(session.session_id, target=target)
+            src_url = (
+                updated_session.extracted_article.source_url
+                if updated_session.extracted_article
+                else updated_session.input_url
+            )
+            card = build_suggestion_adaptive_card(
+                headlines=updated_session.accumulated_headlines,
+                descriptions=updated_session.accumulated_descriptions,
+                source_url=src_url,
+                featured_image_url=updated_session.selected_media_url,
+                session_id=updated_session.session_id,
+                base_url=settings.app_base_url,
+            )
+            return JSONResponse(card)
+        except Exception as exc:
+            logger.error("Failed to fetch more options via Teams: %s", exc)
+            return JSONResponse(build_simple_message(f"⚠️ Could not fetch more options: {exc}"))
+
+    # 4. Check for Cancel command
     if any(t.lower() == "cancel" for t in tokens):
         try:
             session = service.get_latest_session()
