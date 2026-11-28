@@ -137,16 +137,23 @@ def test_teams_webhook_url_submission_and_publish(teams_client: TestClient) -> N
     # Verify card contents and OpenUrl action
     action = card["actions"][0]
     assert action["type"] == "Action.OpenUrl"
-    assert "preview?session_id=" in action["url"]
+    assert "options?session_id=" in action["url"]
     assert "https://test-nures-builder.onrender.com" in action["url"]
+
+    # Verify that multiple headline and description options are displayed
+    all_card_text = " ".join(item.get("text", "") for item in card["body"])
+    assert "H1:" in all_card_text
+    assert "H2:" in all_card_text
+    assert "D1:" in all_card_text
+    assert "D2:" in all_card_text
 
     # Extract session ID from action URL
     session_id = action["url"].split("session_id=")[1]
 
-    # 2. User confirms/publishes post directly from Teams via text command
+    # 2. User confirms/publishes post with custom options (H2 D2) directly from Teams
     publish_payload: dict[str, Any] = {
         "type": "message",
-        "text": f"<at>NewsBot</at> publish {session_id[:8]}",
+        "text": f"<at>NewsBot</at> publish {session_id[:8]} H2 D2",
         "from": {"name": "Gaurav"},
     }
     raw_body_pub = json.dumps(publish_payload).encode("utf-8")

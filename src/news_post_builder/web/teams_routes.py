@@ -12,7 +12,12 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 
 from news_post_builder.config import Settings, get_settings
-from news_post_builder.core.models import ArticleInput, SessionState
+from news_post_builder.core.models import (
+    ArticleInput,
+    DescriptionOption,
+    HeadlineOption,
+    SessionState,
+)
 from news_post_builder.core.service import NewsPostService
 from news_post_builder.web.dependencies import get_service
 
@@ -45,15 +50,15 @@ def verify_teams_hmac(body: bytes, auth_header: str | None, secret: str) -> bool
 
 
 def build_suggestion_adaptive_card(
-    headline: str,
-    description: str,
+    headlines: list[HeadlineOption],
+    descriptions: list[DescriptionOption],
     source_url: str | None,
     featured_image_url: str | None,
     session_id: str,
     base_url: str,
 ) -> dict[str, Any]:
-    """Generate an Adaptive Card payload containing article suggestions."""
-    review_url = f"{base_url.rstrip('/')}/preview?session_id={session_id}"
+    """Generate an Adaptive Card payload containing all article suggestions."""
+    review_url = f"{base_url.rstrip('/')}/options?session_id={session_id}"
 
     body: list[dict[str, Any]] = [
         {
@@ -82,32 +87,45 @@ def build_suggestion_adaptive_card(
             }
         )
 
-    body.extend(
-        [
-            {
-                "type": "TextBlock",
-                "text": "**Top Headline Recommendation:**",
-                "weight": "Bolder",
-                "spacing": "Medium",
-            },
-            {
-                "type": "TextBlock",
-                "text": headline,
-                "wrap": True,
-            },
-            {
-                "type": "TextBlock",
-                "text": "**Top Description Recommendation:**",
-                "weight": "Bolder",
-                "spacing": "Medium",
-            },
-            {
-                "type": "TextBlock",
-                "text": description,
-                "wrap": True,
-            },
-        ]
+    # 1. Headline Options
+    body.append(
+        {
+            "type": "TextBlock",
+            "text": "🏷️ **Headline Options:**",
+            "weight": "Bolder",
+            "spacing": "Medium",
+        }
     )
+    for h in headlines:
+        badge = "⭐ **[Top Pick]** " if h.is_recommended else ""
+        body.append(
+            {
+                "type": "TextBlock",
+                "text": f"• **{h.id}:** {badge}{h.text}",
+                "wrap": True,
+                "spacing": "Small",
+            }
+        )
+
+    # 2. Description Options
+    body.append(
+        {
+            "type": "TextBlock",
+            "text": "📝 **Description Options:**",
+            "weight": "Bolder",
+            "spacing": "Medium",
+        }
+    )
+    for d in descriptions:
+        badge = "⭐ **[Top Pick]** " if d.is_recommended else ""
+        body.append(
+            {
+                "type": "TextBlock",
+                "text": f"• **{d.id}:** {badge}{d.text}",
+                "wrap": True,
+                "spacing": "Small",
+            }
+        )
 
     if featured_image_url:
         body.append(
@@ -122,7 +140,10 @@ def build_suggestion_adaptive_card(
     body.append(
         {
             "type": "TextBlock",
-            "text": (f"💡 *To publish immediately, reply:*\n`@NewsBot publish {session_id[:8]}`"),
+            "text": (
+                f"💡 **Publish recommended:** `@NewsBot publish {session_id[:8]}`\n"
+                f"💡 **Publish custom picks:** `@NewsBot publish {session_id[:8]} H2 D3`"
+            ),
             "wrap": True,
             "spacing": "Medium",
             "isSubtle": True,
@@ -142,7 +163,7 @@ def build_suggestion_adaptive_card(
                     "actions": [
                         {
                             "type": "Action.OpenUrl",
-                            "title": "🚀 Review & Publish in Browser",
+                            "title": "🎨 Select & Customize in Browser",
                             "url": review_url,
                         }
                     ],
@@ -263,13 +284,21 @@ async def handle_teams_webhook(
         return JSONResponse(build_simple_message(help_msg))
 
     # 2. Check for Publish / Confirm command
-    publish_match = re.search(
-        r"^(?:publish|confirm)(?:\s+([a-zA-Z0-9_-]+))?",
-        clean_text,
-        flags=re.IGNORECASE,
-    )
-    if publish_match:
-        prefix = publish_match.group(1)
+    tokens = clean_text.split()
+    if tokens and tokens[0].lower() in {"publish", "confirm"}:
+        prefix: str | None = None
+        chosen_h_id: str | None = None
+        chosen_d_id: str | None = None
+
+        for tok in tokens[1:]:
+            tok_upper = tok.upper()
+            if re.match(r"^H\d+$", tok_upper):
+                chosen_h_id = tok_upper
+            elif re.match(r"^D\d+$", tok_upper):
+                chosen_d_id = tok_upper
+            elif not prefix:
+                prefix = tok
+
         try:
             if prefix:
                 session = service.get_session_by_prefix(prefix)
@@ -285,17 +314,39 @@ async def handle_teams_webhook(
                 return JSONResponse(build_simple_message(msg))
 
             if session.state == SessionState.OPTIONS_READY:
-                top_h = next(
-                    (h for h in session.accumulated_headlines if h.is_recommended),
-                    session.accumulated_headlines[0] if session.accumulated_headlines else None,
-                )
-                top_d = next(
-                    (d for d in session.accumulated_descriptions if d.is_recommended),
-                    session.accumulated_descriptions[0]
-                    if session.accumulated_descriptions
-                    else None,
-                )
-                if not top_h or not top_d:
+                # Find chosen headline (custom ID or top pick)
+                selected_h = None
+                if chosen_h_id:
+                    selected_h = next(
+                        (h for h in session.accumulated_headlines if h.id.upper() == chosen_h_id),
+                        None,
+                    )
+                if not selected_h:
+                    selected_h = next(
+                        (h for h in session.accumulated_headlines if h.is_recommended),
+                        session.accumulated_headlines[0] if session.accumulated_headlines else None,
+                    )
+
+                # Find chosen description (custom ID or top pick)
+                selected_d = None
+                if chosen_d_id:
+                    selected_d = next(
+                        (
+                            d
+                            for d in session.accumulated_descriptions
+                            if d.id.upper() == chosen_d_id
+                        ),
+                        None,
+                    )
+                if not selected_d:
+                    selected_d = next(
+                        (d for d in session.accumulated_descriptions if d.is_recommended),
+                        session.accumulated_descriptions[0]
+                        if session.accumulated_descriptions
+                        else None,
+                    )
+
+                if not selected_h or not selected_d:
                     return JSONResponse(
                         build_simple_message(
                             "⚠️ No generated headlines or descriptions found in this session."
@@ -304,10 +355,10 @@ async def handle_teams_webhook(
 
                 service.select(
                     session_id=session.session_id,
-                    headline=top_h.text,
-                    description=top_d.text,
-                    headline_id=top_h.id,
-                    description_id=top_d.id,
+                    headline=selected_h.text,
+                    description=selected_d.text,
+                    headline_id=selected_h.id,
+                    description_id=selected_d.id,
                     media_id=session.selected_media_id,
                 )
 
@@ -354,31 +405,15 @@ async def handle_teams_webhook(
                     build_simple_message(f"❌ Failed to extract article: {err_msg}")
                 )
 
-            top_h = next(
-                (h for h in updated_session.accumulated_headlines if h.is_recommended),
-                updated_session.accumulated_headlines[0]
-                if updated_session.accumulated_headlines
-                else None,
-            )
-            top_d = next(
-                (d for d in updated_session.accumulated_descriptions if d.is_recommended),
-                updated_session.accumulated_descriptions[0]
-                if updated_session.accumulated_descriptions
-                else None,
-            )
-
-            headline = top_h.text if top_h else "Suggested Headline"
-            description = top_d.text if top_d else "Suggested Description"
-            featured_media_url = updated_session.selected_media_url
-
             card = build_suggestion_adaptive_card(
-                headline=headline,
-                description=description,
+                headlines=updated_session.accumulated_headlines,
+                descriptions=updated_session.accumulated_descriptions,
                 source_url=target_url,
-                featured_image_url=featured_media_url,
+                featured_image_url=updated_session.selected_media_url,
                 session_id=updated_session.session_id,
                 base_url=settings.app_base_url,
             )
+            return JSONResponse(card)
             return JSONResponse(card)
         except Exception as exc:
             logger.error("Error processing URL in Teams webhook: %s", exc)
