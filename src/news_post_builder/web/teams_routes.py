@@ -264,33 +264,40 @@ async def handle_teams_webhook(
     raw_text = payload.get("text", "")
     sender_name = payload.get("from", {}).get("name", "User")
 
-    # Clean text: strip HTML entities and mentions
+    # Clean text: strip HTML entities, <at> tags, any HTML tags, and literal @NewsBot mentions
     clean_text = html.unescape(raw_text)
-    clean_text = re.sub(r"<at>.*?</at>", "", clean_text, flags=re.IGNORECASE)
-    clean_text = re.sub(r"<[^>]+>", "", clean_text).strip()
+    clean_text = re.sub(r"<at[^>]*>.*?</at>", "", clean_text, flags=re.IGNORECASE)
+    clean_text = re.sub(r"<[^>]+>", "", clean_text)
+    clean_text = re.sub(r"@?newsbot", "", clean_text, flags=re.IGNORECASE).strip()
 
     logger.info("Teams webhook received message from %s: %r", sender_name, clean_text)
 
+    tokens = clean_text.split()
+
     # 1. Check for Help command
-    if clean_text.lower() in {"help", "?", "commands"}:
+    if any(t.lower() in {"help", "?", "commands"} for t in tokens):
         help_msg = (
             "👋 **Hi! I am the NURES News Post Builder Bot.**\n\n"
             "Here is how you can use me:\n"
             "• **Generate suggestions:** `@NewsBot https://...` (paste news link)\n"
             "• **Publish latest:** `@NewsBot publish`\n"
             "• **Publish specific post:** `@NewsBot publish <session_id>`\n"
+            "• **Publish custom picks:** `@NewsBot publish <session_id> H2 D3`\n"
             "• **Cancel:** `@NewsBot cancel`\n"
         )
         return JSONResponse(build_simple_message(help_msg))
 
     # 2. Check for Publish / Confirm command
-    tokens = clean_text.split()
-    if tokens and tokens[0].lower() in {"publish", "confirm"}:
+    publish_idx = next(
+        (i for i, t in enumerate(tokens) if t.lower() in {"publish", "confirm"}),
+        None,
+    )
+    if publish_idx is not None:
         prefix: str | None = None
         chosen_h_id: str | None = None
         chosen_d_id: str | None = None
 
-        for tok in tokens[1:]:
+        for tok in tokens[publish_idx + 1 :]:
             tok_upper = tok.upper()
             if re.match(r"^H\d+$", tok_upper):
                 chosen_h_id = tok_upper
@@ -375,7 +382,7 @@ async def handle_teams_webhook(
             return JSONResponse(build_simple_message(f"⚠️ Could not publish post: {exc}"))
 
     # 3. Check for Cancel command
-    if clean_text.lower().startswith("cancel"):
+    if any(t.lower() == "cancel" for t in tokens):
         try:
             session = service.get_latest_session()
             service.cancel(session.session_id)
