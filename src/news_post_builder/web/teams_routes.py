@@ -139,15 +139,29 @@ def build_suggestion_adaptive_card(
 
     body.append(
         {
-            "type": "TextBlock",
-            "text": (
-                f"💡 **Publish recommended:** `@NewsBot publish {session_id[:8]}`\n"
-                f"💡 **Publish custom picks:** `@NewsBot publish {session_id[:8]} H2 D3`\n"
-                f"💡 **Get more choices:** `@NewsBot more`"
-            ),
-            "wrap": True,
+            "type": "Container",
+            "style": "default",
             "spacing": "Medium",
-            "isSubtle": True,
+            "items": [
+                {
+                    "type": "TextBlock",
+                    "text": "💬 **Quick In-Chat Commands (or use buttons below):**",
+                    "weight": "Bolder",
+                    "size": "Small",
+                },
+                {
+                    "type": "TextBlock",
+                    "text": (
+                        f"• **Publish Top Picks:** `@NewsBot publish`\n"
+                        f"• **Publish Custom:** `@NewsBot publish {session_id[:8]} H2 D3`\n"
+                        f"• **Get More Options:** `@NewsBot more`\n"
+                        f"• **Cancel:** `@NewsBot cancel`"
+                    ),
+                    "wrap": True,
+                    "size": "Small",
+                    "isSubtle": True,
+                },
+            ],
         }
     )
 
