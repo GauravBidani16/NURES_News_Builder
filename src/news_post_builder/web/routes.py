@@ -4,7 +4,7 @@ import contextlib
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Form, Query, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
@@ -505,4 +505,66 @@ async def legacy_confirm_view(
         context={"session": session, "result": result, "settings": service.settings},
     )
     attach_session_cookie(resp, session_id)
+    return resp
+
+
+@router.get("/quick-publish", response_class=HTMLResponse)
+async def quick_publish_action(
+    request: Request,
+    session_id: Annotated[str, Query(description="Target session UUID")],
+    service: Annotated[NewsPostService, Depends(get_service)],
+) -> Response:
+    """1-Click publish action invoked from Teams Adaptive Card button."""
+    try:
+        session = service.get_session(session_id)
+    except Exception as exc:
+        raise HTTPException(status_code=404, detail=f"Session not found: {exc}") from exc
+
+    # If already done, show confirmation screen
+    if session.state == SessionState.DONE and session.publish_result:
+        resp = templates.TemplateResponse(
+            request=request,
+            name="confirm.html",
+            context={
+                "session": session,
+                "result": session.publish_result,
+                "settings": service.settings,
+            },
+        )
+        attach_session_cookie(resp, session.session_id)
+        return resp
+
+    # If in OPTIONS_READY, select top recommended options
+    if session.state == SessionState.OPTIONS_READY:
+        top_h = next(
+            (h for h in session.accumulated_headlines if h.is_recommended),
+            session.accumulated_headlines[0] if session.accumulated_headlines else None,
+        )
+        top_d = next(
+            (d for d in session.accumulated_descriptions if d.is_recommended),
+            session.accumulated_descriptions[0] if session.accumulated_descriptions else None,
+        )
+        if not top_h or not top_d:
+            raise HTTPException(
+                status_code=400,
+                detail="No headline or description options generated in this session.",
+            )
+
+        session = service.select(
+            session_id=session.session_id,
+            headline=top_h.text,
+            description=top_d.text,
+            headline_id=top_h.id,
+            description_id=top_d.id,
+            media_id=session.selected_media_id,
+        )
+
+    # Publish
+    updated_session, result = await service.confirm(session.session_id)
+    resp = templates.TemplateResponse(
+        request=request,
+        name="confirm.html",
+        context={"session": updated_session, "result": result, "settings": service.settings},
+    )
+    attach_session_cookie(resp, updated_session.session_id)
     return resp

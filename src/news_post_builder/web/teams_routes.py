@@ -164,9 +164,14 @@ def build_suggestion_adaptive_card(
                     "actions": [
                         {
                             "type": "Action.OpenUrl",
+                            "title": "🚀 1-Click Publish (Top Picks)",
+                            "url": f"{base_url.rstrip('/')}/quick-publish?session_id={session_id}",
+                        },
+                        {
+                            "type": "Action.OpenUrl",
                             "title": "🎨 Select & Customize in Browser",
                             "url": review_url,
-                        }
+                        },
                     ],
                 },
             }

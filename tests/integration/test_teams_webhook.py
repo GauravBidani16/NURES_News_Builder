@@ -134,11 +134,16 @@ def test_teams_webhook_url_submission_and_publish(teams_client: TestClient) -> N
     card = attachment["content"]
     assert card["type"] == "AdaptiveCard"
 
-    # Verify card contents and OpenUrl action
-    action = card["actions"][0]
-    assert action["type"] == "Action.OpenUrl"
-    assert "options?session_id=" in action["url"]
-    assert "https://test-nures-builder.onrender.com" in action["url"]
+    # Verify card contents and OpenUrl actions (1-Click Publish + Customize)
+    action_quick = card["actions"][0]
+    assert action_quick["type"] == "Action.OpenUrl"
+    assert "quick-publish?session_id=" in action_quick["url"]
+    assert "https://test-nures-builder.onrender.com" in action_quick["url"]
+
+    action_customize = card["actions"][1]
+    assert action_customize["type"] == "Action.OpenUrl"
+    assert "options?session_id=" in action_customize["url"]
+    assert "https://test-nures-builder.onrender.com" in action_customize["url"]
 
     # Verify that multiple headline and description options are displayed
     all_card_text = " ".join(item.get("text", "") for item in card["body"])
@@ -148,7 +153,7 @@ def test_teams_webhook_url_submission_and_publish(teams_client: TestClient) -> N
     assert "D2:" in all_card_text
 
     # Extract session ID from action URL
-    session_id = action["url"].split("session_id=")[1]
+    session_id = action_quick["url"].split("session_id=")[1]
 
     # 2. User requests more options directly in Teams
     more_payload: dict[str, Any] = {
@@ -248,3 +253,10 @@ def test_teams_webhook_hyperlinked_title_url_extraction(teams_client: TestClient
     assert "attachments" in data
     card = data["attachments"][0]["content"]
     assert card["type"] == "AdaptiveCard"
+
+    # Test clicking the 1-click quick-publish button directly
+    action_url = card["actions"][0]["url"]
+    session_id = action_url.split("session_id=")[1]
+    res_quick = teams_client.get(f"/quick-publish?session_id={session_id}")
+    assert res_quick.status_code == 200
+    assert "Post Confirmed in Dry-Run Mode" in res_quick.text
