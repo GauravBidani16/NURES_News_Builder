@@ -181,9 +181,7 @@ class NewsPostService:
                 return session
             except Exception as exc:
                 logger.error("LLM Generation failed for session %s: %s", session_id, exc)
-                session.fetch_error = (
-                    "Failed to generate options from the article text. Please try again."
-                )
+                session.fetch_error = f"AI Generation error: {exc}"
                 transition_session(session, SessionState.FETCH_FAILED)
                 self.repository.save(session)
                 return session
