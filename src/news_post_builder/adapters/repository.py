@@ -60,6 +60,30 @@ class SQLiteSessionRepository(SessionRepository):
             data = json.loads(row[0])
             return SessionData.model_validate(data)
 
+    def get_by_prefix(self, prefix: str) -> SessionData | None:
+        query = (
+            "SELECT data_json FROM sessions "
+            "WHERE session_id LIKE ? ORDER BY updated_at DESC LIMIT 1;"
+        )
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (f"{prefix}%",))
+            row = cursor.fetchone()
+            if not row:
+                return None
+            data = json.loads(row[0])
+            return SessionData.model_validate(data)
+
+    def get_latest(self) -> SessionData | None:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT data_json FROM sessions ORDER BY updated_at DESC LIMIT 1;")
+            row = cursor.fetchone()
+            if not row:
+                return None
+            data = json.loads(row[0])
+            return SessionData.model_validate(data)
+
     def save(self, session: SessionData) -> None:
         json_data = session.model_dump_json()
         updated_at = session.updated_at.isoformat()

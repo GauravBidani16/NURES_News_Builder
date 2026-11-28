@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: nures-news-builder
+    runtime: python
+    plan: free
+    region: ohio
+    buildCommand: pip install --upgrade pip && pip install .
+    startCommand: uvicorn news_post_builder.web.app:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: WP_PUBLISH_ENABLED
+        value: "true"
+      - key: WP_BASE_URL
+        sync: false
+      - key: WP_USERNAME
+        sync: false
+      - key: WP_APP_PASSWORD
+        sync: false
+      - key: LLM_API_KEY
+        sync: false
+      - key: TEAMS_WEBHOOK_SECRET
+        sync: false
+      - key: APP_BASE_URL
+        sync: false

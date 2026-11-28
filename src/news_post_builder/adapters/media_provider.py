@@ -54,7 +54,7 @@ class WordPressMediaProvider(MediaProvider):
         defaults = self.get_default_media_items(is_nih=is_nih)
         base_url = self.settings.wp_base_url.rstrip("/")
         endpoint = f"{base_url}/wp-json/wp/v2/media"
-        params = {
+        params: dict[str, str | int] = {
             "search": search_pattern,
             "media_type": "image",
             "per_page": limit,

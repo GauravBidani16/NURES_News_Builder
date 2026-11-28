@@ -73,6 +73,24 @@ class NewsPostService:
             )
         return session
 
+    def get_session_by_prefix(self, prefix: str) -> SessionData:
+        session = self.repository.get_by_prefix(prefix)
+        if not session:
+            raise NewsBuilderError(
+                f"No session found starting with '{prefix}'.",
+                user_message=f"No active session found matching '{prefix}'.",
+            )
+        return session
+
+    def get_latest_session(self) -> SessionData:
+        session = self.repository.get_latest()
+        if not session:
+            raise NewsBuilderError(
+                "No sessions found.",
+                user_message="No recent sessions found.",
+            )
+        return session
+
     async def submit(self, session_id: str, input_data: ArticleInput) -> SessionData:
         session = self.get_session(session_id)
         transition_session(session, SessionState.FETCHING)
@@ -223,7 +241,7 @@ class NewsPostService:
             return session
         except asyncio.CancelledError:
             logger.info("Session %s request_more was cancelled by user.", session_id)
-            if session.state != SessionState.CANCELLED:
+            if str(session.state) != SessionState.CANCELLED:
                 transition_session(session, SessionState.CANCELLED)
                 self.repository.save(session)
             raise

@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -10,9 +11,9 @@ class TaskManager:
     """Tracks active asyncio tasks per session to allow immediate cancellation."""
 
     def __init__(self) -> None:
-        self._tasks: dict[str, asyncio.Task] = {}
+        self._tasks: dict[str, asyncio.Task[Any]] = {}
 
-    def register(self, session_id: str, task: asyncio.Task) -> None:
+    def register(self, session_id: str, task: asyncio.Task[Any]) -> None:
         """Register an active task for a session."""
         self._tasks[session_id] = task
 

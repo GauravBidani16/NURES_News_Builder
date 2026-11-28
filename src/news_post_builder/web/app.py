@@ -12,6 +12,7 @@ from news_post_builder.config import Settings, get_settings
 from news_post_builder.core.exceptions import NewsBuilderError
 from news_post_builder.core.task_manager import TaskManager
 from news_post_builder.web.routes import router
+from news_post_builder.web.teams_routes import teams_router
 
 logger = logging.getLogger("news_post_builder")
 
@@ -44,6 +45,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.settings = settings
 
     app.include_router(router)
+    app.include_router(teams_router)
 
     @app.exception_handler(NewsBuilderError)
     async def domain_error_handler(request: Any, exc: NewsBuilderError) -> JSONResponse:

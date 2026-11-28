@@ -73,6 +73,10 @@ class Settings(BaseSettings):
         alias="WP_FEATURED_MEDIA_DEFAULT_URL",
     )
 
+    # Teams Outgoing Webhook Settings
+    teams_webhook_secret: str = Field(default="", alias="TEAMS_WEBHOOK_SECRET")
+    app_base_url: str = Field(default="http://127.0.0.1:8000", alias="APP_BASE_URL")
+
     @property
     def fallback_models_list(self) -> list[str]:
         raw = self.llm_fallback_models.strip()

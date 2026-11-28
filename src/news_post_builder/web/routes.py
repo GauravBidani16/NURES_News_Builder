@@ -30,6 +30,15 @@ def get_or_create_web_session(
     Returns (session, is_new_cookie_needed).
     """
     if not force_new:
+        query_id = request.query_params.get("session_id")
+        if query_id:
+            try:
+                session = service.get_session(query_id)
+                if session.state not in {SessionState.CANCELLED, SessionState.DONE}:
+                    return session, True
+            except Exception:
+                pass
+
         cookie_id = request.cookies.get(SESSION_COOKIE_NAME)
         if cookie_id:
             try:

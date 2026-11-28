@@ -105,6 +105,14 @@ class SessionRepository(Protocol):
         """Save or update a session."""
         ...
 
+    def get_by_prefix(self, prefix: str) -> SessionData | None:
+        """Retrieve a session whose ID starts with the given prefix."""
+        ...
+
+    def get_latest(self) -> SessionData | None:
+        """Retrieve the most recently updated session."""
+        ...
+
 
 class MediaProvider(Protocol):
     """Port for searching and retrieving featured media options from WordPress."""
